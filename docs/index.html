@@ -760,9 +760,9 @@ toaster.destroy();                            // desmontar y limpiar</code></pre
 						el panel de la enfocada.
 					</p>
 					<ul>
-						<li>En reposo las tabs de atrás van muy montadas, como una baraja, y sin icono: lo que asoma de cada una es más estrecho que el icono y se vería cortado.</li>
+						<li>En reposo las tabs de atrás van montadas, como una baraja, enseñando solo su icono. El icono se arrima al borde por el que asoma la tab: en las posiciones de la derecha la fila crece hacia dentro y asoma el lado izquierdo; en las de la izquierda y el centro, el derecho.</li>
 						<li>El enfoque es la tab del borde de la pantalla, el toast más nuevo. Un toast nuevo se lleva el enfoque.</li>
-						<li>Al entrar el cursor la baraja se abre —el solape baja de <code>26px</code> a <code>12px</code>—, aparecen los iconos y la del frente abre su panel.</li>
+						<li>Al entrar el cursor la baraja se abre —el solape baja de <code>18px</code> a <code>12px</code>— y la del frente abre su panel.</li>
 						<li>Se ven 3 tabs (<code>--sileo-stack-max</code> o <code>visibleToasts</code>). La enfocada nunca se oculta, aunque lleguen toasts nuevos.</li>
 					</ul>
 					<div class="probar">
@@ -816,7 +816,7 @@ sileo.info({
   --sileo-ease-flat: cubic-bezier(0.32, 0.72, 0, 1);
 
   /* fila de tabs */
-  --sileo-tab-overlap: 26px;      /* solape en reposo */
+  --sileo-tab-overlap: 18px;      /* solape en reposo */
   --sileo-tab-overlap-hot: 12px;  /* solape con el cursor dentro */
   --sileo-stack-max: 3;           /* tabs visibles */
   --sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.18));
@@ -830,6 +830,15 @@ sileo.info({
   --sileo-state-action:  oklch(0.623 0.214 259.815);
   --sileo-state-loading: oklch(0.556 0 0);
 }</code></pre></div>
+					<div class="nota">
+						La sombra es lo que separa una tab de la que tiene detrás, así que
+						depende del relleno: con cápsulas claras basta una sombra oscura, pero
+						con <code>theme: "light"</code> la cápsula es oscura y una sombra negra
+						sobre otra cápsula oscura no separa nada — ahí se le suma un filo claro.
+						Si cambias <code>--sileo-fill</code> a mano, ajusta también
+						<code>--sileo-shadow</code>.
+					</div>
+
 					<div class="nota">
 						<code>--sileo-height</code>, <code>--sileo-tab-overlap</code> y
 						<code>--sileo-stack-max</code> están declaradas con

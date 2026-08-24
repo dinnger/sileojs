@@ -55,12 +55,13 @@
 	--sileo-gap: 12px;
 
 	/* Fila de tabs solapadas, a la altura del titulo */
-	--sileo-tab-overlap: 26px; /* cuanto se monta cada tab sobre la vecina */
+	--sileo-tab-overlap: 20px; /* cuanto se monta cada tab sobre la vecina */
 	--sileo-tab-overlap-hot: 12px; /* ...con el cursor dentro, para apuntarlas */
 	--sileo-stack-max: 3; /* tabs visibles */
 
 	/* Va al final de la cadena de filtros del canvas, sobre la silueta ya
-	   fundida. Dentro del filtro gooey no sirve: el umbral de alfa se la come. */
+	   fundida. Dentro del filtro gooey no sirve: el umbral de alfa se la come.
+	   Con capsulas claras (lo de por defecto) basta una sombra oscura. */
 	--sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.18));
 
 	--sileo-fill: #ffffff;
@@ -424,16 +425,35 @@
 	opacity: 0;
 }
 
-/* En reposo solo se ve un trozo de cada tab de atras, mas estrecho que el
-   icono: mejor sin icono. Al entrar el cursor la baraja se abre y aparecen. */
+/* En reposo de cada tab de atras solo asoma su borde de ataque: el icono se
+   arrima a ese lado para caber entero en lo que se ve. En las posiciones a la
+   derecha la fila crece hacia la izquierda, asi que asoma el lado izquierdo. */
 [data-sileo-viewport]:not([data-hot="true"])
 	[data-sileo-toast]:not([data-focused="true"])
-	[data-sileo-badge] {
-	opacity: 0;
+	[data-sileo-header-stack] {
+	left: 7px;
+	right: auto;
 }
 
-[data-sileo-toast][data-ready="true"] [data-sileo-badge] {
-	transition: opacity calc(var(--sileo-duration) * 0.4) ease;
+/* En las de la izquierda y el centro crece al reves y asoma el derecho, asi que
+   ademas hay que invertir el orden para que el icono quede al final. */
+[data-sileo-viewport]:not([data-hot="true"]):is(
+		[data-position$="left"],
+		[data-position$="center"]
+	)
+	[data-sileo-toast]:not([data-focused="true"])
+	[data-sileo-header-stack] {
+	left: auto;
+	right: 7px;
+}
+
+[data-sileo-viewport]:not([data-hot="true"]):is(
+		[data-position$="left"],
+		[data-position$="center"]
+	)
+	[data-sileo-toast]:not([data-focused="true"])
+	[data-sileo-header-inner] {
+	flex-direction: row-reverse;
 }
 
 [data-sileo-toast][data-ready="true"] [data-sileo-title] {
@@ -441,16 +461,15 @@
 }
 
 /* Morphing del contenido del header: dos capas cruzandose con blur */
+/* Fuera del flujo a proposito: la cabecera tiene ancho fijo (--_rw) y recorta
+   con overflow, pero esta pila debe conservar su ancho natural porque de su
+   scrollWidth sale --_pw, el ancho del pill. Como flex item se aplastaba. */
 [data-sileo-header-stack] {
-	position: relative;
+	position: absolute;
+	inset-block: 0;
+	width: max-content;
 	display: inline-flex;
 	align-items: center;
-	height: 100%;
-	/* No encoger: la cabecera tiene ancho fijo (--_rw) y recorta con overflow,
-	   pero el contenido debe conservar su ancho natural porque de ahi sale la
-	   medida --_pw del pill. Si se aplasta, la medida sale 0. */
-	flex: 0 0 auto;
-	min-width: max-content;
 }
 
 [data-sileo-header-inner] {
@@ -640,6 +659,11 @@
 [data-sileo-viewport][data-theme="light"] {
 	--sileo-fill: #1a1a1a;
 	--sileo-desc-color: rgba(255, 255, 255, 0.5);
+	/* Pagina clara = capsula oscura: una sombra negra sobre la tab de atras, que
+	   tambien es oscura, no separa nada. Se le suma un filo claro, que ademas
+	   queda invisible contra la pagina. */
+	--sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.14))
+		drop-shadow(0 0 1.5px rgb(255 255 255 / 0.3));
 }
 [data-sileo-viewport][data-theme="dark"] {
 	--sileo-fill: #f2f2f2;

@@ -174,12 +174,14 @@ Cuando hay varios toasts en la misma posición no se apilan como lista: forman u
 icono, su título y su mensaje; las demás se encogen a un círculo con solo el
 icono y se montan sobre la vecina. Nada baja: solo el panel de la enfocada.
 
-- En reposo las tabs de atrás quedan muy montadas unas sobre otras, como una
-  baraja: se ve solo un trozo de cada una, sin su icono (el trozo es más estrecho
-  que el icono, así que se vería cortado). El enfoque es la tab del borde de la
-  pantalla (el toast más nuevo), y un toast nuevo se lleva el enfoque.
-- Al entrar el cursor, la baraja se abre —el solape baja de `26px` a `12px`—,
-  aparecen los iconos de las otras tabs y la del frente abre su panel.
+- En reposo las tabs de atrás quedan montadas unas sobre otras, como una baraja,
+  enseñando solo su icono. El enfoque es la tab del borde de la pantalla (el
+  toast más nuevo), y un toast nuevo se lleva el enfoque.
+- El icono se arrima al borde por el que asoma la tab, que depende de la
+  posición: en las de la derecha la fila crece hacia dentro y asoma el lado
+  izquierdo; en las de la izquierda y el centro, el derecho.
+- Al entrar el cursor, la baraja se abre —el solape baja de `18px` a `12px`— y la
+  tab del frente abre su panel.
 - Al mover el cursor a otro círculo, el enfoque salta a esa tab: se ensancha en su
   sitio para mostrar su título, abre su mensaje, corre las de atrás y la anterior
   vuelve a ser un círculo.
@@ -255,13 +257,19 @@ Todo son custom properties:
   --sileo-state-success: oklch(0.72 0.19 150);
 
   /* fila de tabs */
-  --sileo-tab-overlap: 26px;     /* solape en reposo (baraja) */
+  --sileo-tab-overlap: 18px;     /* solape en reposo (baraja) */
   --sileo-tab-overlap-hot: 12px; /* solape con el cursor dentro */
   --sileo-stack-max: 3;          /* tabs visibles */
   --sileo-gap: 12px;             /* separación del borde de la pantalla */
   --sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.18));
 }
 ```
+
+La sombra depende del relleno, no del gusto: es lo que separa una tab de la que
+tiene detrás. Con cápsulas claras basta una sombra oscura; con `theme: "light"`
+la cápsula es oscura y una sombra negra sobre otra cápsula oscura no separa nada,
+así que ahí se le suma un filo claro. Si cambias `--sileo-fill` a mano, ajusta
+también `--sileo-shadow`.
 
 `--sileo-height`, `--sileo-tab-overlap` y `--sileo-stack-max` están declaradas con
 `@property`, así que el JS las lee ya resueltas a px y puedes escribirlas en
