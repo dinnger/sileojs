@@ -4,6 +4,8 @@
 [![licencia](https://img.shields.io/npm/l/sileojs?color=%23555)](LICENSE)
 [![sin dependencias](https://img.shields.io/badge/dependencias-0-brightgreen)](https://www.npmjs.com/package/sileojs?activeTab=dependencies)
 
+![til](./intro.gif)
+
 **[Documentación](https://dinnger.github.io/sileojs/docs/)** · **[Demo](https://dinnger.github.io/sileojs/demo/)** · **[npm](https://www.npmjs.com/package/sileojs)** · **[GitHub](https://github.com/dinnger/sileojs)**
 
 Réplica de [sileo.aaryan.design](https://sileo.aaryan.design/) — toast con morphing
