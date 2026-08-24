@@ -1,0 +1,1110 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Sileo · Documentación</title>
+		<link rel="stylesheet" href="../src/sileo.css" />
+		<style>
+			* { box-sizing: border-box; }
+
+			:root {
+				--fondo: #0b0b0c;
+				--fondo-2: #0e0e11;
+				--linea: #1e1e23;
+				--texto: #ededed;
+				--apagado: #8b8b8f;
+				--tenue: #6c6c70;
+				--acento: #6aa8ff;
+			}
+
+			body {
+				margin: 0;
+				background: var(--fondo);
+				color: var(--texto);
+				font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+				font-size: 15px;
+				line-height: 1.6;
+			}
+
+			.saltar {
+				position: absolute; left: -9999px;
+				background: var(--fondo-2); color: var(--texto);
+				padding: 0.6rem 1rem; border-radius: 0.5rem; z-index: 100;
+			}
+			.saltar:focus { left: 1rem; top: 1rem; }
+
+			/* --------------------------------- Layout -------------------------------- */
+
+			.layout {
+				display: grid;
+				grid-template-columns: 260px minmax(0, 1fr);
+				gap: 2.5rem;
+				max-width: 1120px;
+				margin: 0 auto;
+				padding: 0 1.5rem;
+			}
+
+			.lateral {
+				position: sticky;
+				top: 0;
+				align-self: start;
+				height: 100vh;
+				overflow-y: auto;
+				padding: 2rem 0 3rem;
+				border-right: 1px solid var(--linea);
+				scrollbar-width: thin;
+			}
+
+			main { padding: 2rem 0 6rem; min-width: 0; }
+
+			/* --------------------------------- Nav ---------------------------------- */
+
+			.marca {
+				font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em;
+				margin: 0 0 0.15rem;
+			}
+			.marca span {
+				font-size: 0.7rem; font-weight: 400; color: var(--tenue);
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+			}
+			.lateral p.sub { margin: 0 0 1.5rem; font-size: 0.78rem; color: var(--tenue); }
+
+			.lateral h2 {
+				font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em;
+				color: var(--tenue); margin: 1.4rem 0 0.4rem; font-weight: 600;
+			}
+			.lateral nav a {
+				display: block; padding: 0.28rem 0 0.28rem 0.7rem;
+				margin-left: -1px;
+				border-left: 2px solid transparent;
+				color: var(--apagado); text-decoration: none; font-size: 0.85rem;
+				transition: color 120ms ease, border-color 120ms ease;
+			}
+			.lateral nav a:hover { color: var(--texto); }
+			.lateral nav a.activo {
+				color: var(--texto); border-left-color: var(--acento); font-weight: 500;
+			}
+			.lateral nav a:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
+
+			/* ------------------------------- Contenido ------------------------------- */
+
+			section { scroll-margin-top: 1.5rem; }
+			section + section { margin-top: 3rem; }
+
+			h1 { font-size: 1.9rem; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
+			h2.titulo {
+				font-size: 1.25rem; letter-spacing: -0.01em; margin: 0 0 0.75rem;
+				padding-bottom: 0.5rem; border-bottom: 1px solid var(--linea);
+			}
+			h3 { font-size: 0.95rem; margin: 1.6rem 0 0.5rem; }
+			p { margin: 0 0 0.9rem; color: #c9c9cf; }
+			p.lead { font-size: 1rem; color: var(--apagado); }
+			ul { margin: 0 0 0.9rem; padding-left: 1.1rem; color: #c9c9cf; }
+			li { margin: 0.25rem 0; }
+			a { color: var(--acento); }
+
+			code {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.84em;
+				background: #16161a; border: 1px solid var(--linea);
+				border-radius: 0.3rem; padding: 0.08em 0.35em; color: #d5d5db;
+			}
+
+			.codigo { position: relative; margin: 0 0 1rem; }
+			.codigo pre {
+				margin: 0; padding: 0.9rem 1rem;
+				border: 1px solid var(--linea); border-radius: 0.75rem;
+				background: var(--fondo-2); overflow-x: auto; color: #c9c9cf;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.8rem; line-height: 1.6;
+			}
+			.codigo pre code { background: none; border: 0; padding: 0; font-size: inherit; }
+			.codigo .copiar {
+				position: absolute; top: 0.5rem; right: 0.5rem;
+				appearance: none; cursor: pointer; font: inherit; font-size: 0.7rem;
+				padding: 0.2rem 0.5rem; border-radius: 0.4rem;
+				border: 1px solid var(--linea); background: #16161a; color: var(--apagado);
+				opacity: 0; transition: opacity 120ms ease, color 120ms ease;
+			}
+			.codigo:hover .copiar, .codigo .copiar:focus-visible { opacity: 1; }
+			.codigo .copiar:hover { color: var(--texto); }
+
+			.nota {
+				border-left: 2px solid var(--acento);
+				background: #101319; border-radius: 0 0.5rem 0.5rem 0;
+				padding: 0.75rem 1rem; margin: 0 0 1rem;
+				font-size: 0.88rem; color: #b9c4d4;
+			}
+			.nota strong { color: var(--texto); }
+			.nota.aviso { border-left-color: #d9a441; background: #191509; color: #d3c4a4; }
+
+			table {
+				width: 100%; border-collapse: collapse; margin: 0 0 1rem;
+				font-size: 0.84rem; display: block; overflow-x: auto;
+			}
+			th, td {
+				text-align: left; padding: 0.5rem 0.7rem;
+				border-bottom: 1px solid var(--linea); vertical-align: top;
+			}
+			th { color: var(--tenue); font-weight: 600; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.06em; }
+			td { color: #c9c9cf; }
+			td code { white-space: nowrap; }
+
+			.probar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1rem; }
+			.probar button {
+				appearance: none; cursor: pointer; font: inherit; font-size: 0.78rem;
+				padding: 0.35rem 0.75rem; border-radius: 9999px;
+				border: 1px solid #26262a; background: #16161a; color: var(--texto);
+				transition: background 140ms ease, border-color 140ms ease;
+			}
+			.probar button:hover { background: #1e1e23; border-color: #34343a; }
+
+			footer {
+				margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--linea);
+				color: var(--tenue); font-size: 0.82rem;
+			}
+
+			.enlaces {
+				display: flex; flex-wrap: wrap; gap: 0.9rem;
+				margin: 1.6rem 0 0; padding-top: 1rem;
+				border-top: 1px solid var(--linea);
+				font-size: 0.82rem;
+			}
+			.enlaces a { text-decoration: none; }
+			.enlaces a:hover { text-decoration: underline; }
+
+			#menu > summary { display: none; }
+
+			@media (max-width: 900px) {
+				#menu > summary {
+					display: block; cursor: pointer; list-style: none;
+					font-size: 0.8rem; color: var(--apagado);
+					padding: 0.5rem 0.75rem; margin-bottom: 0.25rem;
+					border: 1px solid var(--linea); border-radius: 0.5rem;
+					background: var(--fondo-2);
+				}
+				#menu > summary::-webkit-details-marker { display: none; }
+				#menu > summary::after { content: " ▾"; color: var(--tenue); }
+				#menu[open] > summary::after { content: " ▴"; }
+			}
+
+			@media (max-width: 900px) {
+				.layout { grid-template-columns: 1fr; gap: 0; }
+				.lateral {
+					position: static; height: auto; border-right: 0;
+					border-bottom: 1px solid var(--linea); padding: 1.5rem 0 1rem;
+				}
+				.lateral nav { display: flex; flex-wrap: wrap; gap: 0.1rem 0.9rem; }
+				.lateral nav a { border-left: 0; padding: 0.2rem 0; }
+				.lateral nav a.activo { border-left: 0; text-decoration: underline; }
+				.lateral h2 { width: 100%; margin: 0.9rem 0 0.2rem; }
+				main { padding-top: 1.5rem; }
+			}
+		</style>
+	</head>
+
+	<body>
+		<a class="saltar" href="#contenido">Saltar al contenido</a>
+
+		<div class="layout">
+			<aside class="lateral">
+				<p class="marca">Sileo <span>v0.1.0</span></p>
+				<p class="sub">Toast con morphing gooey y spring physics.</p>
+
+				<details id="menu" open>
+					<summary>Secciones</summary>
+					<nav aria-label="Secciones de la documentación">
+					<h2>Empezar</h2>
+					<a href="#que-es">Qué es</a>
+					<a href="#instalacion">Instalación</a>
+					<a href="#inicio-rapido">Inicio rápido</a>
+
+					<h2>Frameworks</h2>
+					<a href="#vanilla">JavaScript / vanilla</a>
+					<a href="#vue">Vue 3</a>
+					<a href="#react">React</a>
+					<a href="#svelte">Svelte</a>
+					<a href="#angular">Angular</a>
+					<a href="#ssr">SSR y sin build</a>
+
+					<h2>API</h2>
+					<a href="#api-sileo">sileo.*</a>
+					<a href="#opciones-toast">Opciones del toast</a>
+					<a href="#opciones-toaster">Opciones del toaster</a>
+					<a href="#exports">Exports</a>
+
+					<h2>Comportamiento</h2>
+					<a href="#interaccion">Interacción</a>
+					<a href="#fila-tabs">La fila de tabs</a>
+					<a href="#autopilot">Autopilot</a>
+
+					<h2>Estilo</h2>
+					<a href="#variables">Variables CSS</a>
+					<a href="#temas">Temas</a>
+					<a href="#clases">Clases propias</a>
+
+					<h2>Referencia</h2>
+					<a href="#accesibilidad">Accesibilidad</a>
+					<a href="#compatibilidad">Compatibilidad</a>
+					<a href="#por-dentro">Cómo funciona</a>
+					</nav>
+				</details>
+
+				<p class="enlaces">
+					<a href="https://github.com/dinnger/sileojs">GitHub ↗</a>
+					<a href="https://www.npmjs.com/package/sileojs">npm ↗</a>
+					<a href="../demo/index.html">Demo →</a>
+				</p>
+			</aside>
+
+			<main id="contenido">
+				<h1>Sileo</h1>
+				<p class="lead">
+					Notificaciones toast con morphing gooey y spring physics. Core vanilla,
+					cero dependencias, y toda la animación en CSS. Funciona con cualquier
+					framework; trae adaptador para Vue 3.
+				</p>
+				<p>
+					<a href="../demo/index.html">Ver la demo interactiva →</a>
+					&nbsp;·&nbsp; <a href="https://github.com/dinnger/sileojs">Código en GitHub ↗</a>
+					&nbsp;·&nbsp; <a href="https://www.npmjs.com/package/sileojs">Paquete en npm ↗</a>
+				</p>
+
+				<!-- ============================================================ -->
+				<section id="que-es">
+					<h2 class="titulo">Qué es</h2>
+					<p>
+						Sileo muestra una cápsula con el estado y el título. Al pasar el cursor
+						por encima se despliega el mensaje: la cápsula y el panel se
+						<strong>funden</strong> en una sola forma, sin costuras, gracias a un
+						filtro SVG de metaballs.
+					</p>
+					<p>
+						Cuando hay varias notificaciones a la vez forman una
+						<strong>fila de pestañas solapadas</strong> a la altura del título. Solo
+						la enfocada muestra su texto; las demás quedan como círculos con su
+						icono. Ver <a href="#fila-tabs">La fila de tabs</a>.
+					</p>
+					<div class="probar">
+						<button type="button" data-run="success">Probar success</button>
+						<button type="button" data-run="stack">Probar la fila (3)</button>
+					</div>
+					<p>
+						El JavaScript solo mantiene el estado, crea el DOM, mide dos cosas
+						(ancho de la cápsula y alto del panel) y coloca las tabs. Todo el
+						movimiento —el spring, el morphing, la entrada y la salida— es CSS.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="instalacion">
+					<h2 class="titulo">Instalación</h2>
+
+					<h3>Con bundler (npm, pnpm, yarn)</h3>
+					<div class="codigo"><pre><code>npm i sileojs</code></pre></div>
+					<div class="codigo"><pre><code>import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";</code></pre></div>
+
+					<div class="nota aviso">
+						<strong>La hoja de estilos es obligatoria.</strong> El paquete no la
+						inyecta solo: sin <code>sileojs/styles.css</code> no hay geometría ni
+						animación y los toasts salen sin formato.
+					</div>
+
+					<h3>Sin build, desde el navegador</h3>
+					<p>
+						Es un módulo ES sin dependencias, así que se puede importar tal cual:
+					</p>
+					<div class="codigo"><pre><code>&lt;link rel="stylesheet" href="/ruta/a/sileojs/src/sileo.css"&gt;
+
+&lt;script type="module"&gt;
+  import { sileo, createToaster } from "/ruta/a/sileojs/src/sileo.js";
+  createToaster({ position: "top-right" });
+  sileo.success({ title: "Listo" });
+&lt;/script&gt;</code></pre></div>
+
+					<div class="nota">
+						Los módulos ES necesitan un servidor que sirva los <code>.js</code> con
+						<code>Content-Type: text/javascript</code>. Ojo con
+						<code>python -m http.server</code>: en Windows los sirve como
+						<code>text/plain</code> y el navegador los rechaza. Con
+						<code>npx serve .</code> funciona.
+					</div>
+
+					<h3>Qué trae el paquete</h3>
+					<table>
+						<thead><tr><th>Import</th><th>Contenido</th></tr></thead>
+						<tbody>
+							<tr><td><code>sileojs</code></td><td>Core vanilla: <code>sileo</code>, <code>createToaster</code>, <code>getToaster</code>…</td></tr>
+							<tr><td><code>sileojs/vue</code></td><td>Adaptador Vue 3: <code>SileoPlugin</code>, <code>SileoToaster</code>, <code>useSileo</code></td></tr>
+							<tr><td><code>sileojs/styles.css</code></td><td>La hoja de estilos</td></tr>
+						</tbody>
+					</table>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="inicio-rapido">
+					<h2 class="titulo">Inicio rápido</h2>
+					<p>Dos pasos: montar el toaster una vez y llamar a <code>sileo.*()</code> desde donde sea.</p>
+					<div class="codigo"><pre><code>import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";
+
+// una sola vez, al arrancar la app
+createToaster({ position: "top-right", theme: "system" });
+
+// desde cualquier parte
+sileo.success({
+  title: "Guardado",
+  description: "Tus cambios se sincronizaron con el servidor.",
+});</code></pre></div>
+					<div class="probar"><button type="button" data-run="quick">Probar</button></div>
+					<p>
+						<code>createToaster()</code> es opcional: si no lo llamas, el primer
+						<code>sileo.*()</code> monta uno con los valores por defecto. Llámalo si
+						quieres fijar posición, tema o márgenes.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="vanilla">
+					<h2 class="titulo">JavaScript / vanilla</h2>
+					<p>
+						El core no sabe nada de frameworks. El patrón es siempre el mismo:
+						montar el toaster al arrancar, destruirlo si tu vista desaparece.
+					</p>
+					<div class="codigo"><pre><code>import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";
+
+const toaster = createToaster({
+  position: "bottom-center",
+  theme: "system",
+  offset: 24,
+});
+
+document.querySelector("#guardar").addEventListener("click", async () =&gt; {
+  await sileo.promise(guardar(), {
+    loading: { id: "guardar", title: "Guardando", description: "Un momento…" },
+    success: () =&gt; ({ title: "Guardado", description: "Todo listo." }),
+    error: (err) =&gt; ({ title: "Error", description: String(err.message) }),
+  });
+});
+
+// al salir de la página / desmontar el widget
+toaster.destroy();</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="vue">
+					<h2 class="titulo">Vue 3</h2>
+					<p>Hay dos formas. La global es la más cómoda si vas a usarlo en toda la app.</p>
+
+					<h3>Sin componente: plugin y <code>$sileo</code> global</h3>
+					<p>
+						El plugin monta el toaster al arrancar y deja <code>$sileo</code>
+						disponible en todas las plantillas. No hace falta poner ningún
+						componente ni importar nada en cada archivo.
+					</p>
+					<div class="codigo"><pre><code>// main.js
+import { createApp } from "vue";
+import { SileoPlugin } from "sileojs/vue";
+import "sileojs/styles.css";
+import App from "./App.vue";
+
+createApp(App)
+  .use(SileoPlugin, { position: "top-right", theme: "system" })
+  .mount("#app");</code></pre></div>
+
+					<div class="codigo"><pre><code>&lt;!-- cualquier componente, sin imports --&gt;
+&lt;template&gt;
+  &lt;button @click="$sileo.success({ title: 'Guardado' })"&gt;
+    Guardar
+  &lt;/button&gt;
+&lt;/template&gt;</code></pre></div>
+
+					<div class="nota">
+						<code>$sileo</code> es una <em>globalProperty</em>: solo existe dentro de
+						la plantilla. En <code>&lt;script setup&gt;</code> usa
+						<code>import { sileo } from "sileojs"</code> o
+						<code>inject("sileo")</code> — el plugin también lo provee.
+					</div>
+
+					<p>
+						Al plugin le puedes pasar las mismas opciones que a
+						<code>createToaster()</code>. Con <code>{ mount: false }</code> registra
+						<code>$sileo</code> y el componente, pero no monta nada: el toaster lo
+						montas tú.
+					</p>
+
+					<h3>Con componente</h3>
+					<p>
+						Útil si quieres que el toaster viva y muera con una vista concreta, o
+						cambiar sus props de forma reactiva.
+					</p>
+					<div class="codigo"><pre><code>&lt;script setup&gt;
+import { SileoToaster, useSileo } from "sileojs/vue";
+import "sileojs/styles.css";
+
+const sileo = useSileo();
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;SileoToaster position="top-right" theme="system" /&gt;
+
+  &lt;button @click="sileo.success({ title: 'Guardado' })"&gt;
+    Guardar
+  &lt;/button&gt;
+&lt;/template&gt;</code></pre></div>
+					<p>
+						Props: <code>position</code>, <code>theme</code>, <code>offset</code> y
+						<code>options</code>. Cambiarlas reconfigura el toaster en caliente.
+					</p>
+					<div class="nota">
+						El toaster es único para toda la página. Si ya lo montó el plugin (u
+						otro <code>createToaster()</code>), el componente lo reutiliza y
+						<strong>no</strong> lo destruye al desmontarse: solo destruye el que
+						creó él.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="react">
+					<h2 class="titulo">React</h2>
+					<div class="codigo"><pre><code>import { useEffect } from "react";
+import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";
+
+export default function App() {
+  useEffect(() =&gt; {
+    const toaster = createToaster({ position: "top-right", theme: "system" });
+    return () =&gt; toaster.destroy();
+  }, []);
+
+  return (
+    &lt;button onClick={() =&gt; sileo.success({ title: "Guardado" })}&gt;
+      Guardar
+    &lt;/button&gt;
+  );
+}</code></pre></div>
+					<div class="nota aviso">
+						<code>destroy</code> usa <code>this</code>: llámalo sobre el toaster
+						(<code>() =&gt; toaster.destroy()</code>). Si pasas
+						<code>createToaster(…).destroy</code> suelto como función de limpieza,
+						peta al desmontar.
+					</div>
+					<p>
+						En React 18 con <em>StrictMode</em> el efecto se monta, se limpia y se
+						vuelve a montar en desarrollo. No pasa nada: el segundo
+						<code>createToaster()</code> crea uno nuevo tras el
+						<code>destroy()</code> del primero.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="svelte">
+					<h2 class="titulo">Svelte</h2>
+					<div class="codigo"><pre><code>&lt;script&gt;
+  import { onMount } from "svelte";
+  import { sileo, createToaster } from "sileojs";
+  import "sileojs/styles.css";
+
+  onMount(() =&gt; {
+    const toaster = createToaster({ position: "top-right" });
+    return () =&gt; toaster.destroy();
+  });
+&lt;/script&gt;
+
+&lt;button on:click={() =&gt; sileo.success({ title: "Guardado" })}&gt;
+  Guardar
+&lt;/button&gt;</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="angular">
+					<h2 class="titulo">Angular</h2>
+					<p>La hoja de estilos va en <code>angular.json</code>:</p>
+					<div class="codigo"><pre><code>"styles": ["node_modules/sileojs/src/sileo.css"]</code></pre></div>
+					<div class="codigo"><pre><code>import { Component, OnInit, OnDestroy } from "@angular/core";
+import { sileo, createToaster } from "sileojs";
+
+@Component({
+  selector: "app-root",
+  template: `&lt;button (click)="guardar()"&gt;Guardar&lt;/button&gt;`,
+})
+export class AppComponent implements OnInit, OnDestroy {
+  private toaster?: ReturnType&lt;typeof createToaster&gt;;
+
+  ngOnInit() {
+    this.toaster = createToaster({ position: "top-right" });
+  }
+
+  ngOnDestroy() {
+    this.toaster?.destroy();
+  }
+
+  guardar() {
+    sileo.success({ title: "Guardado" });
+  }
+}</code></pre></div>
+					<div class="nota aviso">
+						<strong>TypeScript:</strong> el paquete todavía no trae
+						<code>.d.ts</code>. Activa <code>allowJs</code> o declara el módulo:
+						<code>declare module "sileojs";</code>
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="ssr">
+					<h2 class="titulo">SSR y sin build</h2>
+					<p>
+						El core toca <code>document</code> en cuanto montas el toaster, así que
+						en Next, Nuxt, SvelteKit o Astro hay que montarlo solo en el cliente:
+						dentro de <code>useEffect</code>, <code>onMounted</code>,
+						<code>onMount</code> o un <code>&lt;script&gt;</code> de cliente. Importar
+						el módulo por sí solo no ejecuta nada.
+					</p>
+					<p>
+						Sin bundler puedes resolver el nombre del paquete con un
+						<em>import map</em>:
+					</p>
+					<div class="codigo"><pre><code>&lt;script type="importmap"&gt;
+{ "imports": { "sileojs": "/vendor/sileojs/src/sileo.js" } }
+&lt;/script&gt;
+
+&lt;script type="module"&gt;
+  import { sileo, createToaster } from "sileojs";
+  createToaster();
+  window.sileo = sileo;   // si lo quieres global de verdad
+&lt;/script&gt;</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="api-sileo">
+					<h2 class="titulo">API · <code>sileo.*</code></h2>
+					<table>
+						<thead><tr><th>Método</th><th>Devuelve</th><th>Qué hace</th></tr></thead>
+						<tbody>
+							<tr><td><code>sileo.show(opts)</code></td><td><code>id</code></td><td>Usa <code>opts.type</code> (o <code>opts.state</code>) como estado</td></tr>
+							<tr><td><code>sileo.success(opts)</code></td><td><code>id</code></td><td rowspan="6">Atajos por estado</td></tr>
+							<tr><td><code>sileo.error(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.warning(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.info(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.action(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.loading(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.promise(p, opts)</code></td><td>la promesa</td><td><code>loading</code> → <code>success</code> / <code>error</code> / <code>action</code></td></tr>
+							<tr><td><code>sileo.update(id, opts)</code></td><td>—</td><td>Cambia un toast vivo: colapsa, cambia el contenido y sigue</td></tr>
+							<tr><td><code>sileo.dismiss(id)</code></td><td>—</td><td>Salida animada</td></tr>
+							<tr><td><code>sileo.clear(position?)</code></td><td>—</td><td>Limpia todo, o solo una posición</td></tr>
+						</tbody>
+					</table>
+
+					<div class="nota">
+						El <code>id</code> por defecto es <code>"sileo-default"</code>: llamadas
+						repetidas <strong>reemplazan</strong> el mismo toast en vez de apilarse.
+						Pasa un <code>id</code> propio a cada uno para que convivan.
+					</div>
+					<div class="probar">
+						<button type="button" data-run="mismo-id">Sin id (se reemplaza)</button>
+						<button type="button" data-run="ids">Con id propio (se apilan)</button>
+					</div>
+
+					<h3><code>sileo.promise()</code></h3>
+					<p>
+						Acepta una promesa o una función que la devuelva. Muestra el estado
+						<code>loading</code> (sin auto-cierre y sin desplegarse) y lo cambia al
+						resolverse. Devuelve la misma promesa, así que puedes seguir
+						encadenando —y capturando— con normalidad.
+					</p>
+					<div class="codigo"><pre><code>sileo.promise(() =&gt; subirArchivo(file), {
+  loading: { id: "subida", title: "Subiendo", description: "Enviando archivo…" },
+  success: (data) =&gt; ({ title: "Subido", description: data.nombre }),
+  error:   (err)  =&gt; ({ title: "Falló", description: String(err.message) }),
+
+  // opcional: en vez de success, un estado "action" con botón
+  action: (data) =&gt; ({
+    title: "Reporte listo",
+    description: "Ya puedes descargarlo.",
+    button: { title: "Descargar", onClick: () =&gt; descargar(data.url) },
+  }),
+});</code></pre></div>
+					<div class="probar">
+						<button type="button" data-run="promise">Probar promesa</button>
+						<button type="button" data-run="promise-fail">Que falle</button>
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="opciones-toast">
+					<h2 class="titulo">Opciones del toast</h2>
+					<table>
+						<thead><tr><th>Opción</th><th>Tipo</th><th>Por defecto</th><th>Descripción</th></tr></thead>
+						<tbody>
+							<tr><td><code>id</code></td><td><code>string</code></td><td><code>"sileo-default"</code></td><td>Identidad. Mismo id = mismo toast</td></tr>
+							<tr><td><code>title</code></td><td><code>string</code></td><td>el estado</td><td>Texto de la cápsula</td></tr>
+							<tr><td><code>description</code></td><td><code>string | Node | {html}</code></td><td>—</td><td>El mensaje del panel. Sin él, el toast no se despliega</td></tr>
+							<tr><td><code>type</code> / <code>state</code></td><td><code>success | loading | error | warning | info | action</code></td><td><code>"success"</code></td><td>Color e icono</td></tr>
+							<tr><td><code>position</code></td><td>una de las 6</td><td>la del toaster</td><td>Puede diferir por toast</td></tr>
+							<tr><td><code>duration</code></td><td><code>number | null</code></td><td><code>6000</code></td><td>ms hasta cerrarse. <code>null</code> = se queda</td></tr>
+							<tr><td><code>icon</code></td><td><code>Node | {html} | string</code></td><td>el del estado</td><td>Un <code>string</code> se inserta como texto; para un SVG usa <code>{ html }</code></td></tr>
+							<tr><td><code>button</code></td><td><code>{ title, onClick }</code></td><td>—</td><td>Botón dentro del panel</td></tr>
+							<tr><td><code>styles</code></td><td><code>{ title, description, badge, button }</code></td><td>—</td><td>Clases CSS tuyas para cada parte</td></tr>
+							<tr><td><code>className</code></td><td><code>string</code></td><td>—</td><td>Clase para la raíz del toast</td></tr>
+							<tr><td><code>fill</code></td><td><code>string</code></td><td>según tema</td><td>Color de la cápsula y el panel</td></tr>
+							<tr><td><code>roundness</code></td><td><code>number</code></td><td><code>16</code></td><td>Radio; también escala el blur del gooey</td></tr>
+							<tr><td><code>autopilot</code></td><td><code>false | { expand, collapse }</code></td><td>150 / 4000 ms</td><td>Ver <a href="#autopilot">Autopilot</a></td></tr>
+						</tbody>
+					</table>
+
+					<h3>Contenido enriquecido</h3>
+					<p>
+						<code>description</code> e <code>icon</code> aceptan un nodo del DOM o
+						<code>{ html }</code>. Un <code>string</code> siempre se inserta como
+						texto plano, así que no hay riesgo de inyección al pintar datos de
+						usuario.
+					</p>
+					<div class="codigo"><pre><code>sileo.info({
+  id: "gracias",
+  title: "Gracias",
+  icon: { html: '&lt;svg viewBox="0 0 24 24" …&gt;&lt;/svg&gt;' },
+  description: nodoDelDom,
+  styles: { title: "mi-titulo", description: "mi-texto" },
+});</code></pre></div>
+					<div class="probar"><button type="button" data-run="icono">Probar icono propio</button></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="opciones-toaster">
+					<h2 class="titulo">Opciones del toaster</h2>
+					<div class="codigo"><pre><code>const toaster = createToaster({
+  position: "top-right",     // las 6 posiciones
+  theme: "system",           // "light" | "dark" | "system"
+  offset: 24,                // número, string, o { top, right, bottom, left }
+  visibleToasts: 3,          // tabs visibles en la fila
+  options: {                 // valores por defecto para todos los toasts
+    duration: 4000,
+    roundness: 20,
+  },
+  container: document.body,  // dónde montar los viewports
+});
+
+toaster.set({ position: "bottom-center" });   // reconfigurar en caliente
+toaster.destroy();                            // desmontar y limpiar</code></pre></div>
+
+					<table>
+						<thead><tr><th>Posición</th><th>Dónde aparece</th></tr></thead>
+						<tbody>
+							<tr><td><code>top-left</code> · <code>top-center</code> · <code>top-right</code></td><td>Arriba; el panel se abre hacia abajo</td></tr>
+							<tr><td><code>bottom-left</code> · <code>bottom-center</code> · <code>bottom-right</code></td><td>Abajo; el panel se abre hacia arriba</td></tr>
+						</tbody>
+					</table>
+					<div class="probar">
+						<button type="button" data-run="pos-tl">top-left</button>
+						<button type="button" data-run="pos-tc">top-center</button>
+						<button type="button" data-run="pos-br">bottom-right</button>
+						<button type="button" data-run="reset-pos">volver a top-right</button>
+					</div>
+					<p>
+						Cada posición es un stack independiente, con su propia fila de tabs y su
+						propio foco.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="exports">
+					<h2 class="titulo">Exports</h2>
+					<table>
+						<thead><tr><th>Export</th><th>Qué es</th></tr></thead>
+						<tbody>
+							<tr><td><code>sileo</code> <em>(también default)</em></td><td>La API para lanzar toasts</td></tr>
+							<tr><td><code>createToaster(opts)</code></td><td>Monta el toaster (o reconfigura el que haya) y lo devuelve</td></tr>
+							<tr><td><code>getToaster()</code></td><td>El toaster montado, o <code>null</code></td></tr>
+							<tr><td><code>Toaster</code></td><td>La clase, por si quieres instanciarla tú</td></tr>
+							<tr><td><code>dismissToast(id)</code></td><td>Igual que <code>sileo.dismiss</code></td></tr>
+							<tr><td><code>SILEO_POSITIONS</code> · <code>SILEO_STATES</code></td><td>Los valores válidos, como arrays</td></tr>
+							<tr><td><code>STATE_ICON</code></td><td>Los iconos por defecto (SVG en string) por si quieres reusarlos</td></tr>
+						</tbody>
+					</table>
+					<p>Y desde <code>sileojs/vue</code>:</p>
+					<table>
+						<thead><tr><th>Export</th><th>Qué es</th></tr></thead>
+						<tbody>
+							<tr><td><code>SileoPlugin</code> <em>(también default)</em></td><td>Monta el toaster, registra el componente y <code>$sileo</code></td></tr>
+							<tr><td><code>SileoToaster</code></td><td>El componente</td></tr>
+							<tr><td><code>useSileo()</code></td><td>Devuelve <code>sileo</code>, para composables</td></tr>
+						</tbody>
+					</table>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="interaccion">
+					<h2 class="titulo">Interacción</h2>
+					<ul>
+						<li><strong>Cursor encima</strong> → se abre el panel y se <strong>pausa</strong> el auto-cierre de todos los toasts.</li>
+						<li><strong>Cursor a otra tab</strong> → el enfoque salta a esa: se ensancha, muestra su título y abre su mensaje.</li>
+						<li><strong>Arrastrar</strong> en vertical más de 30&nbsp;px → se descarta.</li>
+						<li><strong>Teclado</strong> → cada toast es enfocable; al recibir el foco se comporta como si tuviera el cursor encima.</li>
+						<li><code>prefers-reduced-motion</code> → se desactiva todo el movimiento.</li>
+					</ul>
+					<p>
+						El toast de estado <code>loading</code> nunca se despliega ni se
+						auto-cierra: está esperando a que lo actualices.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="fila-tabs">
+					<h2 class="titulo">La fila de tabs</h2>
+					<p>
+						Varias notificaciones en la misma posición no se apilan como lista:
+						forman una fila de pestañas solapadas a la altura del título. Solo baja
+						el panel de la enfocada.
+					</p>
+					<ul>
+						<li>En reposo las tabs de atrás van muy montadas, como una baraja, y sin icono: lo que asoma de cada una es más estrecho que el icono y se vería cortado.</li>
+						<li>El enfoque es la tab del borde de la pantalla, el toast más nuevo. Un toast nuevo se lleva el enfoque.</li>
+						<li>Al entrar el cursor la baraja se abre —el solape baja de <code>26px</code> a <code>12px</code>—, aparecen los iconos y la del frente abre su panel.</li>
+						<li>Se ven 3 tabs (<code>--sileo-stack-max</code> o <code>visibleToasts</code>). La enfocada nunca se oculta, aunque lleguen toasts nuevos.</li>
+					</ul>
+					<div class="probar">
+						<button type="button" data-run="stack">Apilar 3</button>
+						<button type="button" data-run="stack5">Apilar 5</button>
+						<button type="button" data-run="clear">Limpiar</button>
+					</div>
+					<p>Las posiciones salen de una sola recurrencia, del borde hacia dentro:</p>
+					<div class="codigo"><pre><code>x[0]     = 0
+x[i+1]   = x[i] + ancho(i) - tab-overlap
+ancho(i) = (i enfocada ? ancho de su cápsula : alto del toast)</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="autopilot">
+					<h2 class="titulo">Autopilot</h2>
+					<p>
+						Un toast nuevo se abre solo un momento para que se lea el mensaje, y se
+						cierra pasados unos segundos. Por defecto se abre a los 150&nbsp;ms y se
+						cierra a los 4&nbsp;s (siempre dentro de su <code>duration</code>).
+					</p>
+					<div class="codigo"><pre><code>sileo.info({ title: "Sin autopilot", autopilot: false });
+
+sileo.info({
+  title: "A mi ritmo",
+  description: "Se abre en seguida y se queda 8 segundos.",
+  duration: 10000,
+  autopilot: { expand: 0, collapse: 8000 },
+});</code></pre></div>
+					<div class="nota">
+						Mientras el cursor está dentro del stack el autopilot <strong>deja de
+						contar</strong>: no cierra el panel que estás señalando. Al salir el
+						cursor, todo vuelve a su reposo.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="variables">
+					<h2 class="titulo">Variables CSS</h2>
+					<p>Todo se ajusta con custom properties; sobrescríbelas donde quieras.</p>
+					<div class="codigo"><pre><code>:root {
+  /* forma */
+  --sileo-width: 350px;
+  --sileo-height: 40px;
+  --sileo-roundness: 16px;
+  --sileo-gap: 12px;              /* separación del borde de la pantalla */
+
+  /* movimiento */
+  --sileo-duration: 600ms;
+  --sileo-spring-easing: linear(…);   /* el spring, ya linealizado */
+  --sileo-ease-flat: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* fila de tabs */
+  --sileo-tab-overlap: 26px;      /* solape en reposo */
+  --sileo-tab-overlap-hot: 12px;  /* solape con el cursor dentro */
+  --sileo-stack-max: 3;           /* tabs visibles */
+  --sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.18));
+
+  /* color */
+  --sileo-fill: #ffffff;
+  --sileo-state-success: oklch(0.723 0.219 142.136);
+  --sileo-state-error:   oklch(0.637 0.237 25.331);
+  --sileo-state-warning: oklch(0.795 0.184 86.047);
+  --sileo-state-info:    oklch(0.685 0.169 237.323);
+  --sileo-state-action:  oklch(0.623 0.214 259.815);
+  --sileo-state-loading: oklch(0.556 0 0);
+}</code></pre></div>
+					<div class="nota">
+						<code>--sileo-height</code>, <code>--sileo-tab-overlap</code> y
+						<code>--sileo-stack-max</code> están declaradas con
+						<code>@property</code>. El JS las lee ya resueltas a px, así que puedes
+						escribirlas en cualquier unidad y el CSS sigue siendo la única fuente de
+						las medidas.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="temas">
+					<h2 class="titulo">Temas</h2>
+					<p>
+						Con <code>theme</code> el toaster elige el relleno: en tema claro la
+						cápsula es oscura y al revés. <code>"system"</code> sigue a
+						<code>prefers-color-scheme</code> y reacciona a los cambios.
+					</p>
+					<div class="codigo"><pre><code>createToaster({ theme: "system" });   // "light" | "dark" | "system"</code></pre></div>
+					<p>
+						Si no pasas <code>theme</code>, manda el CSS: el relleno es
+						<code>--sileo-fill</code>. Y siempre puedes fijarlo por toast con
+						<code>fill</code>.
+					</p>
+					<div class="probar">
+						<button type="button" data-run="tema-claro">theme: light</button>
+						<button type="button" data-run="tema-oscuro">theme: dark</button>
+						<button type="button" data-run="tema-sistema">theme: system</button>
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="clases">
+					<h2 class="titulo">Clases propias</h2>
+					<p>
+						Con <code>styles</code> (por toast) o <code>options.styles</code> (para
+						todos) pones tus clases en cada parte. Útil con Tailwind o CSS modules.
+					</p>
+					<div class="codigo"><pre><code>createToaster({
+  options: {
+    styles: { description: "text-sm text-slate-500" },
+  },
+});
+
+sileo.success({
+  title: "Guardado",
+  description: "Todo listo.",
+  className: "mi-toast",
+  styles: { title: "font-bold", badge: "ring-1" },
+});</code></pre></div>
+					<p>
+						Si prefieres apuntar al DOM, cada parte tiene su atributo:
+						<code>[data-sileo-toast]</code>, <code>[data-sileo-header]</code>,
+						<code>[data-sileo-badge]</code>, <code>[data-sileo-title]</code>,
+						<code>[data-sileo-description]</code>, <code>[data-sileo-button]</code>.
+					</p>
+					<div class="nota aviso">
+						Si tu hoja tiene reglas sueltas del tipo <code>button:hover { … }</code>,
+						ten en cuenta que la raíz del toast <em>es</em> un
+						<code>&lt;button&gt;</code>. Sileo se defiende subiendo la especificidad
+						de sus propios estilos, pero acostumbra a scopear los tuyos.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="accesibilidad">
+					<h2 class="titulo">Accesibilidad</h2>
+					<ul>
+						<li>Cada posición es un <code>&lt;section role="status" aria-live="polite"&gt;</code>: los lectores de pantalla anuncian el toast al aparecer, sin interrumpir.</li>
+						<li>La raíz de cada toast es un <code>&lt;button&gt;</code> enfocable, con <code>aria-label</code> igual al título.</li>
+						<li>Al recibir el foco por teclado se abre el panel, igual que con el cursor.</li>
+						<li>Las tabs que pasan del máximo visible se ocultan con <code>visibility: hidden</code>, así que salen del orden de tabulación.</li>
+						<li>Con <code>prefers-reduced-motion: reduce</code> no queda ninguna animación ni transición.</li>
+					</ul>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="compatibilidad">
+					<h2 class="titulo">Compatibilidad</h2>
+					<p>
+						Chrome/Edge&nbsp;113+, Safari&nbsp;16.4+ y Firefox&nbsp;128+. Sin
+						<em>build step</em> y sin dependencias.
+					</p>
+					<table>
+						<thead><tr><th>Se apoya en</th><th>Para qué</th></tr></thead>
+						<tbody>
+							<tr><td><code>linear()</code></td><td>El spring, como easing nativa</td></tr>
+							<tr><td><code>@property</code></td><td>Que el JS lea las medidas ya resueltas</td></tr>
+							<tr><td><code>translate</code> / <code>scale</code></td><td>Colocar las tabs sin tocar <code>transform</code></td></tr>
+							<tr><td><code>oklch()</code>, <code>color-mix()</code></td><td>Los colores de estado y sus fondos</td></tr>
+							<tr><td>Filtros SVG</td><td>El morphing gooey</td></tr>
+							<tr><td><code>ResizeObserver</code></td><td>Medir cápsula y panel</td></tr>
+						</tbody>
+					</table>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="por-dentro">
+					<h2 class="titulo">Cómo funciona</h2>
+					<p>El efecto de fundido son dos rectángulos y un filtro SVG:</p>
+					<ul>
+						<li>La <strong>cápsula</strong> y el <strong>panel</strong> son dos <code>div</code> con <code>border-radius</code>, dentro de una capa filtrada.</li>
+						<li>El filtro difumina y luego sube el contraste del alfa (<code>×20 −10</code>): eso convierte el blur en un borde duro, y ahí es donde dos formas cercanas se <strong>funden</strong>.</li>
+						<li>El color del puente no sale del blur —en sRGB sin premultiplicar lo transparente es negro y saldría gris—: se inunda con <code>--sileo-fill</code> y se recorta con el alfa del umbral.</li>
+						<li>Al abrirse, la cápsula crece hacia el panel para provocar el solape.</li>
+						<li>Las posiciones de abajo reusan la misma geometría con <code>scaleY(-1)</code>.</li>
+						<li>La sombra va después del filtro en la cadena, sobre la silueta ya fundida.</li>
+					</ul>
+					<p>
+						El JS solo publica medidas —<code>--_pw</code> (ancho de la cápsula),
+						<code>--_ch</code> (alto del contenido), <code>--_tx</code> (sitio en la
+						fila)— y el CSS deriva de ahí toda la geometría con <code>calc()</code> y
+						<code>max()</code>.
+					</p>
+				</section>
+
+				<footer>
+					<p>
+						MIT · Réplica de
+						<a href="https://sileo.aaryan.design/">sileo.aaryan.design</a> de Aaryan
+						Kapoor, reescrita como core vanilla.
+						<a href="../demo/index.html">Demo</a> ·
+						<a href="../demo/spec.html">Tests del core</a> ·
+						<a href="../demo/spec-vue.html">Tests de Vue</a>
+					</p>
+				</footer>
+			</main>
+		</div>
+
+		<script type="module">
+			import { sileo, createToaster } from "../src/sileo.js";
+
+			const toaster = createToaster({ position: "top-right", theme: "system" });
+
+			/* ------------------------------ Ejemplos vivos ---------------------------- */
+
+			const wait = (ms, ok = true) =>
+				new Promise((res, rej) =>
+					setTimeout(ok ? res : rej, ms, ok ? { nombre: "reporte.pdf" } : new Error("sin conexión")),
+				);
+
+			const corazon =
+				'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>';
+
+			const apilar = (n) => {
+				const kinds = [sileo.success, sileo.info, sileo.warning, sileo.error, sileo.action];
+				const nombres = ["Uno", "Dos", "Tres", "Cuatro", "Cinco"];
+				for (let i = 0; i < n; i++) {
+					setTimeout(
+						() =>
+							kinds[i]({
+								id: `demo-${i}`,
+								title: nombres[i],
+								description: `Mensaje de la notificación ${nombres[i].toLowerCase()}.`,
+							}),
+						i * 280,
+					);
+				}
+			};
+
+			const ejemplos = {
+				success: () =>
+					sileo.success({ id: "d1", title: "Guardado", description: "Tus cambios se sincronizaron." }),
+				quick: () =>
+					sileo.success({
+						id: "quick",
+						title: "Guardado",
+						description: "Tus cambios se sincronizaron con el servidor.",
+					}),
+				"mismo-id": () =>
+					sileo.info({ title: "Sin id", description: `Reemplaza al anterior · ${new Date().toLocaleTimeString()}` }),
+				ids: () => apilar(3),
+				stack: () => apilar(3),
+				stack5: () => apilar(5),
+				clear: () => sileo.clear(),
+				icono: () =>
+					sileo.info({
+						id: "icono",
+						title: "Gracias",
+						icon: { html: corazon },
+						description: "Icono propio pasado como { html }.",
+					}),
+				promise: () =>
+					sileo
+						.promise(() => wait(1600), {
+							loading: { id: "pr", title: "Subiendo", description: "Enviando archivo…" },
+							success: (data) => ({ title: "Subido", description: data.nombre }),
+							error: () => ({ title: "Falló" }),
+						})
+						.catch(() => {}),
+				"promise-fail": () =>
+					sileo
+						.promise(() => wait(1400, false), {
+							loading: { id: "pf", title: "Guardando", description: "Un momento…" },
+							success: () => ({ title: "Guardado" }),
+							error: (err) => ({ title: "Error", description: String(err.message) }),
+						})
+						.catch(() => {}),
+				"pos-tl": () => sileo.success({ id: "p1", title: "top-left", position: "top-left", description: "Aquí." }),
+				"pos-tc": () => sileo.info({ id: "p2", title: "top-center", position: "top-center", description: "Aquí." }),
+				"pos-br": () => sileo.warning({ id: "p3", title: "bottom-right", position: "bottom-right", description: "Aquí." }),
+				"reset-pos": () => {
+					sileo.clear();
+					toaster.set({ position: "top-right" });
+				},
+				"tema-claro": () => {
+					toaster.set({ theme: "light" });
+					sileo.success({ id: "t", title: "theme: light", description: "Cápsula oscura." });
+				},
+				"tema-oscuro": () => {
+					toaster.set({ theme: "dark" });
+					sileo.success({ id: "t", title: "theme: dark", description: "Cápsula clara." });
+				},
+				"tema-sistema": () => {
+					toaster.set({ theme: "system" });
+					sileo.success({ id: "t", title: "theme: system", description: "Sigue al sistema." });
+				},
+			};
+
+			for (const btn of document.querySelectorAll("[data-run]")) {
+				btn.addEventListener("click", () => ejemplos[btn.dataset.run]?.());
+			}
+
+			/* ------------------------------ Botón copiar ------------------------------ */
+
+			for (const bloque of document.querySelectorAll(".codigo")) {
+				const btn = document.createElement("button");
+				btn.type = "button";
+				btn.className = "copiar";
+				btn.textContent = "copiar";
+				btn.addEventListener("click", async () => {
+					try {
+						await navigator.clipboard.writeText(bloque.querySelector("code").textContent);
+						btn.textContent = "copiado";
+					} catch {
+						btn.textContent = "no se pudo";
+					}
+					setTimeout(() => (btn.textContent = "copiar"), 1400);
+				});
+				bloque.appendChild(btn);
+			}
+
+			/* --------------------------- Menú en pantallas pequeñas ------------------- */
+
+			const menu = document.getElementById("menu");
+			const estrecho = window.matchMedia("(max-width: 900px)");
+			const sincronizarMenu = () => (menu.open = !estrecho.matches);
+			estrecho.addEventListener("change", sincronizarMenu);
+			sincronizarMenu();
+			menu.addEventListener("click", (e) => {
+				if (estrecho.matches && e.target.closest("nav a")) menu.open = false;
+			});
+
+			/* ------------------------- Resaltar sección actual ------------------------ */
+
+			const enlaces = new Map(
+				[...document.querySelectorAll(".lateral nav a")].map((a) => [a.getAttribute("href").slice(1), a]),
+			);
+			let actual = null;
+			const marcar = (id) => {
+				if (id === actual) return;
+				actual = id;
+				for (const [key, a] of enlaces) a.classList.toggle("activo", key === id);
+			};
+
+			const observador = new IntersectionObserver(
+				(entries) => {
+					// la sección visible más alta gana
+					const visibles = entries
+						.filter((e) => e.isIntersecting)
+						.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
+					if (visibles[0]) marcar(visibles[0].target.id);
+				},
+				{ rootMargin: "0px 0px -70% 0px", threshold: 0 },
+			);
+			for (const s of document.querySelectorAll("main section[id]")) observador.observe(s);
+		</script>
+	</body>
+</html>

@@ -11,5 +11,29 @@
   },
   "files": ["src"],
   "sideEffects": ["./src/sileo.css"],
+  "keywords": [
+    "toast",
+    "notification",
+    "notificaciones",
+    "vanilla-js",
+    "vue",
+    "vue3",
+    "react",
+    "svelte",
+    "css-animation",
+    "spring",
+    "gooey",
+    "metaballs",
+    "zero-dependencies"
+  ],
+  "homepage": "https://dinnger.github.io/sileojs/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dinnger/sileojs.git"
+  },
+  "bugs": {
+    "url": "https://github.com/dinnger/sileojs/issues"
+  },
+  "author": "Walter Omar (https://github.com/dinnger)",
   "license": "MIT"
 }

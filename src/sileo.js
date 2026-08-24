@@ -744,6 +744,13 @@ class Toaster {
 			}
 		}
 
+		// El tema puede cambiar sin que se cree ningun viewport: _viewport() solo
+		// corre al insertar un toast, asi que aqui se refresca en los que ya hay.
+		for (const vp of this.viewports.values()) {
+			if (this.theme) vp.setAttribute("data-theme", this.resolvedTheme);
+			else vp.removeAttribute("data-theme");
+		}
+
 		this._order(list);
 		this._syncTimers(list);
 		this._gcViewports();

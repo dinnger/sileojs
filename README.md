@@ -1,5 +1,11 @@
 # Sileo (vanilla JS)
 
+[![npm](https://img.shields.io/npm/v/sileojs?color=%230b7285&label=npm)](https://www.npmjs.com/package/sileojs)
+[![licencia](https://img.shields.io/npm/l/sileojs?color=%23555)](LICENSE)
+[![sin dependencias](https://img.shields.io/badge/dependencias-0-brightgreen)](https://www.npmjs.com/package/sileojs?activeTab=dependencies)
+
+**[Documentación](https://dinnger.github.io/sileojs/docs/)** · **[Demo](https://dinnger.github.io/sileojs/demo/)** · **[npm](https://www.npmjs.com/package/sileojs)** · **[GitHub](https://github.com/dinnger/sileojs)**
+
 Réplica de [sileo.aaryan.design](https://sileo.aaryan.design/) — toast con morphing
 gooey y spring physics — reescrita como **core vanilla, cero dependencias**, que
 funciona con cualquier framework JS. Incluye adaptador Vue 3.
@@ -13,14 +19,23 @@ en CSS**: el spring es una `linear()` easing nativa y la geometría se resuelve 
 src/sileo.css   motor de animación (spring, morph, gooey, temas)
 src/sileo.js    core vanilla — store + renderer + API
 src/vue.js      adaptador Vue 3 (componente, plugin, composable)
+docs/index.html documentación completa (panel lateral, ejemplos vivos)
 demo/index.html playground sin build
 ```
 
+**[Documentación completa →](https://dinnger.github.io/sileojs/docs/)** — instalación, uso en cada
+framework, referencia de la API, variables CSS y accesibilidad, con ejemplos que
+se pueden probar en la página.
+
 ## Instalación
 
+```bash
+npm i sileojs
+```
+
 ```js
-import { sileo, createToaster } from "./src/sileo.js";
-import "./src/sileo.css";
+import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";
 
 createToaster({ position: "top-right", theme: "system" });
 
@@ -34,9 +49,9 @@ valores por defecto.
 
 ```vue
 <script setup>
-import { SileoToaster } from "sileo-js/vue";
-import { sileo } from "sileo-js";
-import "sileo-js/styles.css";
+import { SileoToaster } from "sileojs/vue";
+import { sileo } from "sileojs";
+import "sileojs/styles.css";
 </script>
 
 <template>
@@ -54,8 +69,8 @@ importar nada en cada componente:
 ```js
 // main.js
 import { createApp } from "vue";
-import { SileoPlugin } from "sileo-js/vue";
-import "sileo-js/styles.css";
+import { SileoPlugin } from "sileojs/vue";
+import "sileojs/styles.css";
 import App from "./App.vue";
 
 createApp(App)
@@ -70,7 +85,7 @@ createApp(App)
 ```
 
 `$sileo` solo existe en la plantilla (es una `globalProperty`). Dentro de
-`<script setup>` usa `import { sileo } from "sileo-js"` o `inject("sileo")`.
+`<script setup>` usa `import { sileo } from "sileojs"` o `inject("sileo")`.
 
 Pasa `{ mount: false }` si prefieres montar el toaster tú (o usar el
 componente).
