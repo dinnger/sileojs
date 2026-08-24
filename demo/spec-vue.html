@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<link rel="stylesheet" href="../src/sileo.css">
+<style>body{margin:0;background:#0b0b0c;color:#ededed;font-family:system-ui,sans-serif;padding:2rem}
+#log{font:11px monospace;white-space:pre;margin-top:2rem}</style>
+<script type="importmap">
+{ "imports": { "vue": "https://unpkg.com/vue@3/dist/vue.esm-browser.js" } }
+</script>
+</head><body>
+<div id="global"></div>
+<div id="comp"></div>
+<pre id="log"></pre>
+<script type="module">
+import { createApp, h } from "vue";
+import { SileoPlugin, SileoToaster, useSileo } from "../src/vue.js";
+
+const out = [];
+const ok = (name, cond, extra = "") => out.push(`${cond ? "PASS" : "FAIL"}  ${name}${extra ? "  -> " + extra : ""}`);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+
+/* -------- A. sin componente: plugin + variable global $sileo -------------- */
+createApp({
+  template: `<button id="b-global" @click="$sileo.success({ title: 'Global', description: 'Desde $sileo.' })">Guardar</button>`,
+}).use(SileoPlugin, { position: "top-right", theme: "system" }).mount("#global");
+
+await sleep(200);
+// El viewport no existe hasta el primer toast (se crea y se recoge solo).
+ok("plugin: aun sin toasts no hay viewport", !document.querySelector("[data-sileo-viewport]"));
+document.getElementById("b-global").click();
+await sleep(300);
+ok("plugin: $sileo lanza el toast",
+   !!document.querySelector('[data-sileo-toast][data-state="success"]'),
+   document.querySelector("[data-sileo-title]")?.textContent);
+ok("plugin: aplica la position que le pasas",
+   document.querySelector("[data-sileo-viewport]")?.dataset.position === "top-right",
+   document.querySelector("[data-sileo-viewport]")?.dataset.position);
+
+/* -------- B. con componente <SileoToaster> -------------------------------- */
+const appB = createApp({
+  components: { SileoToaster },
+  setup() {
+    const sileo = useSileo();
+    return { lanzar: () => sileo.info({ id: "comp", title: "Componente", description: "Desde useSileo()." }) };
+  },
+  template: `<div><SileoToaster position="bottom-left" /><button id="b-comp" @click="lanzar">Ir</button></div>`,
+});
+appB.mount("#comp");
+await sleep(200);
+document.getElementById("b-comp").click();
+await sleep(300);
+ok("componente: useSileo() lanza el toast",
+   !!document.querySelector('[data-sileo-toast][data-state="info"]'));
+
+/* -------- C. desmontar limpia -------------------------------------------- */
+appB.unmount();
+await sleep(300);
+// El componente no creo el toaster (lo hizo el plugin), asi que al desmontarse
+// no debe llevarselo por delante.
+ok("unmount: el toaster del plugin sobrevive", !!document.querySelector('[data-sileo-toast][data-state="success"]'));
+document.getElementById("b-global").click();
+await sleep(300);
+ok("unmount: $sileo sigue funcionando",
+   !!document.querySelector('[data-sileo-toast][data-state="success"]'));
+
+document.getElementById("log").textContent = out.join("\n") +
+  (out.some((l) => l.startsWith("FAIL")) ? "\n\nHAY FALLOS" : "\n\nTODO OK");
+</script></body></html>

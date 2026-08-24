@@ -1,0 +1,667 @@
+/* ==========================================================================
+   Sileo - CSS engine
+   Todo el movimiento (morph del pill, expansion, entrada/salida, blur del
+   header, gooey merge, fila de tabs) vive aqui. JS solo escribe medidas:
+     --_pw  ancho medido del pill        --_ch  alto medido del contenido
+     --_tx  corrimiento de la tab en la fila
+     --_i   profundidad en z
+     --_sh  alto del stack (en el viewport)
+   y voltea atributos de estado:
+     [data-ready] [data-expanded] [data-exiting] [data-focused] [data-hidden]
+     [data-hot] (en el viewport)
+   ========================================================================== */
+
+/* ------------------------------ Registered ------------------------------- */
+/* Registrarlas hace que getComputedStyle las devuelva ya resueltas a px, asi
+   el JS puede leer las medidas del stack en cualquier unidad y el CSS sigue
+   siendo la unica fuente de verdad. Sin esto, --sileo-gap: 0.75rem se leeria
+   como "0.75rem" y parseFloat daria 0.75. */
+
+@property --sileo-height {
+	syntax: "<length>";
+	inherits: true;
+	initial-value: 40px;
+}
+@property --sileo-tab-overlap {
+	syntax: "<length>";
+	inherits: true;
+	initial-value: 12px;
+}
+@property --sileo-stack-max {
+	syntax: "<integer>";
+	inherits: true;
+	initial-value: 3;
+}
+
+/* -------------------------------- Variables ------------------------------- */
+
+:root {
+	/* Spring bounce 0.25 linealizado - sin JS, sin libreria de animacion */
+	--sileo-spring-easing: linear(
+		0, 0.002 0.6%, 0.007 1.2%, 0.015 1.8%, 0.026 2.4%, 0.041 3.1%,
+		0.06 3.8%, 0.108 5.3%, 0.157 6.6%, 0.214 8%, 0.467 13.7%, 0.577 16.3%,
+		0.631 17.7%, 0.682 19.1%, 0.73 20.5%, 0.771 21.8%, 0.808 23.1%,
+		0.844 24.5%, 0.874 25.8%, 0.903 27.2%, 0.928 28.6%, 0.952 30.1%,
+		0.972 31.6%, 0.988 33.1%, 1.01 35.7%, 1.025 38.5%, 1.034 41.6%,
+		1.038 45%, 1.035 50.1%, 1.012 64.2%, 1.003 73%, 0.999 83.7%, 1
+	);
+	/* Misma curva sin overshoot - usada al colapsar (bounce: 0) */
+	--sileo-ease-flat: cubic-bezier(0.32, 0.72, 0, 1);
+
+	--sileo-duration: 600ms;
+	--sileo-height: 40px;
+	--sileo-width: 350px;
+	--sileo-roundness: 16px;
+	--sileo-gap: 12px;
+
+	/* Fila de tabs solapadas, a la altura del titulo */
+	--sileo-tab-overlap: 26px; /* cuanto se monta cada tab sobre la vecina */
+	--sileo-tab-overlap-hot: 12px; /* ...con el cursor dentro, para apuntarlas */
+	--sileo-stack-max: 3; /* tabs visibles */
+
+	/* Va al final de la cadena de filtros del canvas, sobre la silueta ya
+	   fundida. Dentro del filtro gooey no sirve: el umbral de alfa se la come. */
+	--sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.18));
+
+	--sileo-fill: #ffffff;
+
+	--sileo-state-success: oklch(0.723 0.219 142.136);
+	--sileo-state-loading: oklch(0.556 0 0);
+	--sileo-state-error: oklch(0.637 0.237 25.331);
+	--sileo-state-warning: oklch(0.795 0.184 86.047);
+	--sileo-state-info: oklch(0.685 0.169 237.323);
+	--sileo-state-action: oklch(0.623 0.214 259.815);
+}
+
+/* --------------------------------- Reset ---------------------------------- */
+/* Independiente del reset del host: sin esto el padding del panel desborda. */
+
+[data-sileo-viewport],
+[data-sileo-viewport] *,
+[data-sileo-viewport] *::before,
+[data-sileo-viewport] *::after {
+	box-sizing: border-box;
+}
+
+/* -------------------------------- Viewports ------------------------------- */
+
+/* El viewport es el escenario del stack: las tabs se posicionan absolutas
+   dentro de su padding box. Su alto (--_sh, publicado por el JS) envuelve
+   exactamente al stack, asi que hace de zona de hover estable: cruzar el
+   hueco que queda bajo un panel abierto no dispara un pointerleave. */
+
+[data-sileo-viewport] {
+	position: fixed;
+	z-index: 50;
+	display: block;
+	width: min(var(--sileo-width), calc(100vw - 2 * var(--sileo-gap)));
+	height: var(--_sh, var(--sileo-height));
+	pointer-events: auto;
+	contain: layout style;
+	transition: height var(--sileo-duration) var(--sileo-spring-easing);
+}
+
+/* Con el cursor dentro la baraja se abre un poco: las tabs de atras dejan de
+   estar tucked y se pueden apuntar. */
+[data-sileo-viewport][data-hot="true"] {
+	--sileo-tab-overlap: var(--sileo-tab-overlap-hot);
+}
+
+[data-sileo-viewport][data-position^="top"] {
+	top: var(--sileo-gap);
+	--_oy: top;
+}
+[data-sileo-viewport][data-position^="bottom"] {
+	bottom: var(--sileo-gap);
+	--_oy: bottom;
+}
+[data-sileo-viewport][data-position$="left"] {
+	left: var(--sileo-gap);
+	--_ox: left;
+}
+[data-sileo-viewport][data-position$="right"] {
+	right: var(--sileo-gap);
+	--_ox: right;
+}
+[data-sileo-viewport][data-position$="center"] {
+	left: 50%;
+	transform: translateX(-50%);
+	--_ox: center;
+}
+
+/* ---------------------------------- Toast --------------------------------- */
+
+[data-sileo-toast] {
+	/* --_exp: altura total expandida. max() puro CSS, sin JS */
+	--_exp: max(calc(var(--sileo-height) * 2.25), calc(var(--sileo-height) + var(--_ch, 0px)));
+	--_blur: calc(var(--sileo-roundness) * 0.5);
+
+	/* Ancho de la tab en la fila: solo la enfocada muestra su titulo, las demas
+	   se encogen a un circulo con el icono. Puro CSS. */
+	--_rw: var(--sileo-height);
+
+	/* Todas las tabs comparten la misma caja: ocupan el ancho completo (para el
+	   panel) y se apilan en z. El desplazamiento horizontal (--_tx, del JS) va
+	   sobre la pill y la cabecera, no sobre la raiz, para que el panel quede
+	   siempre pegado al borde. */
+	position: absolute;
+	inset-inline: 0;
+	width: auto;
+	height: var(--sileo-height);
+	z-index: calc(40 - var(--_i, 0));
+
+	/* La raiz no captura puntero: si lo hiciera, la tab de arriba se comeria el
+	   hover de toda la franja. Lo capturan la cabecera y el panel. */
+	pointer-events: none;
+	border: 0;
+	background: transparent;
+	padding: 0;
+	font: inherit;
+	color: inherit;
+	opacity: 0;
+	transform: translateZ(0) scale(0.95);
+	transform-origin: var(--_ox, center) var(--_oy, center);
+	contain: layout style;
+	overflow: visible;
+	-webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * Blindaje. La raiz del toast es un <button>, asi que una hoja del host con
+ * algo tan comun como `button:hover { background: #eee }` (especificidad 0,1,1)
+ * le gana a [data-sileo-toast] (0,1,0) y pinta un fondo sobre toda la franja de
+ * 350px. Estas reglas van scopeadas al viewport para subir la especificidad por
+ * encima de eso. No se toca `outline`: el foco de teclado debe seguir viendose.
+ */
+[data-sileo-viewport] [data-sileo-toast],
+[data-sileo-viewport] [data-sileo-toast]:hover,
+[data-sileo-viewport] [data-sileo-toast]:focus,
+[data-sileo-viewport] [data-sileo-toast]:focus-visible,
+[data-sileo-viewport] [data-sileo-toast]:active {
+	background: transparent;
+	border: 0;
+	border-radius: 0;
+	box-shadow: none;
+	padding: 0;
+	margin: 0;
+	font: inherit;
+	color: inherit;
+	text-align: inherit;
+	appearance: none;
+}
+
+/* La tab enfocada se levanta sobre las que tiene delante: si no, la lenguesta
+   del frente le taparia la cabecera. */
+[data-sileo-toast][data-focused="true"] {
+	z-index: 60;
+	--_rw: var(--_pw, var(--sileo-height));
+}
+
+/* Las tabs que pasan de --sileo-stack-max: fuera de vista, del orden de
+   tabulacion y del arbol de accesibilidad, pero con caja medible. */
+[data-sileo-toast][data-hidden="true"] {
+	visibility: hidden;
+}
+
+/* El filtro gooey se apaga en las tabs ocultas: no hay nada que fundir, y
+   rasterizarlo invisible deja un artefacto de composicion (ademas de costar).
+   Va sobre el canvas porque --sileo-goo lo escribe el JS en el style inline. */
+[data-sileo-toast][data-hidden="true"] [data-sileo-canvas] {
+	filter: none;
+}
+
+/* La fila se pega al borde de pantalla; el panel abre hacia dentro */
+[data-sileo-viewport][data-position^="top"] [data-sileo-toast] {
+	top: 0;
+}
+[data-sileo-viewport][data-position^="bottom"] [data-sileo-toast] {
+	bottom: 0;
+}
+
+[data-sileo-toast][data-state="loading"] {
+	cursor: default;
+}
+
+/* Estado abierto: la altura de la raiz la resuelve CSS */
+[data-sileo-toast][data-has-desc="true"][data-expanded="true"] {
+	height: var(--_exp);
+}
+
+[data-sileo-toast][data-ready="true"] {
+	opacity: 1;
+	transform: translateZ(0) scale(1);
+	transition:
+		transform calc(var(--sileo-duration) * 0.66) var(--sileo-spring-easing),
+		opacity calc(var(--sileo-duration) * 0.66) var(--sileo-spring-easing),
+		height var(--sileo-duration) var(--sileo-spring-easing);
+}
+
+/* Direccion de entrada segun el borde de la pantalla */
+[data-sileo-viewport][data-position^="top"] [data-sileo-toast]:not([data-ready="true"]) {
+	transform: translateY(-6px) scale(0.95);
+}
+[data-sileo-viewport][data-position^="bottom"] [data-sileo-toast]:not([data-ready="true"]) {
+	transform: translateY(6px) scale(0.95);
+}
+
+/* Salida */
+[data-sileo-toast][data-ready="true"][data-exiting="true"] {
+	opacity: 0;
+	pointer-events: none;
+}
+[data-sileo-viewport][data-position^="top"] [data-sileo-toast][data-ready="true"][data-exiting="true"] {
+	transform: translateY(-6px) scale(0.95);
+}
+[data-sileo-viewport][data-position^="bottom"] [data-sileo-toast][data-ready="true"][data-exiting="true"] {
+	transform: translateY(6px) scale(0.95);
+}
+
+/* Swipe-to-dismiss: JS solo escribe --_sy, el resto es CSS */
+[data-sileo-toast][data-swiping="true"] {
+	transition: none;
+	transform: translateZ(0) translateY(var(--_sy, 0px)) scale(1);
+}
+
+/* ------------------------------- Gooey canvas ----------------------------- */
+/* Capa de formas. El filtro SVG mezcla pill + body (metaballs).              */
+
+[data-sileo-canvas] {
+	position: absolute;
+	left: 0;
+	right: 0;
+	height: var(--sileo-height);
+	pointer-events: none;
+	transform: translateZ(0);
+	filter: var(--sileo-goo, opacity(1)) var(--sileo-shadow, opacity(1));
+	contain: layout style;
+	overflow: visible;
+}
+
+[data-sileo-toast][data-has-desc="true"] [data-sileo-canvas] {
+	height: var(--_exp);
+}
+
+/* El borde superior reusa la misma geometria, volteada */
+[data-sileo-canvas][data-edge="top"] {
+	bottom: 0;
+	transform: scaleY(-1) translateZ(0);
+}
+[data-sileo-canvas][data-edge="bottom"] {
+	top: 0;
+}
+
+/* El puente del filtro se tine con el relleno del toast: flood-color es una
+   propiedad CSS, asi que hereda el --sileo-fill de este toast. Sin esto el
+   puente toma el RGB del blur y sale gris oscuro. */
+[data-sileo-goo-flood] {
+	flood-color: var(--sileo-fill);
+	flood-opacity: 1;
+}
+
+[data-sileo-defs] {
+	position: absolute;
+	width: 0;
+	height: 0;
+	overflow: hidden;
+}
+
+/* --------------------------------- Shapes --------------------------------- */
+
+[data-sileo-pill],
+[data-sileo-body] {
+	position: absolute;
+	background: var(--sileo-fill);
+	border-radius: var(--sileo-roundness);
+}
+
+[data-sileo-pill] {
+	top: 0;
+	width: var(--_rw);
+	height: var(--sileo-height);
+	min-width: var(--sileo-height);
+	translate: var(--_tx, 0px) 0;
+	transition:
+		width var(--sileo-duration) var(--sileo-spring-easing),
+		height var(--sileo-duration) var(--sileo-spring-easing),
+		translate var(--sileo-duration) var(--sileo-spring-easing);
+}
+
+/* Al abrir, el pill crece hacia abajo para solaparse con el body: eso es lo
+   que hace que el filtro los funda en una sola gota. */
+[data-sileo-toast][data-has-desc="true"][data-expanded="true"] [data-sileo-pill] {
+	height: calc(var(--sileo-height) + var(--_blur) * 3);
+}
+
+[data-sileo-pill][data-align="left"] { left: 0; }
+[data-sileo-pill][data-align="right"] { right: 0; }
+[data-sileo-pill][data-align="center"] { left: 50%; transform: translateX(-50%); }
+
+[data-sileo-body] {
+	top: var(--sileo-height);
+	left: 0;
+	width: 100%;
+	height: 0;
+	opacity: 0;
+	transition:
+		height var(--sileo-duration) var(--sileo-ease-flat),
+		opacity var(--sileo-duration) var(--sileo-ease-flat);
+}
+
+[data-sileo-toast][data-has-desc="true"][data-expanded="true"] [data-sileo-body] {
+	height: calc(var(--_exp) - var(--sileo-height));
+	opacity: 1;
+	transition:
+		height var(--sileo-duration) var(--sileo-spring-easing),
+		opacity calc(var(--sileo-duration) * 0.4) linear;
+}
+
+/* Sin transiciones antes del primer frame pintado */
+[data-sileo-toast]:not([data-ready="true"]) :is([data-sileo-pill], [data-sileo-body]) {
+	transition: none;
+}
+
+/* --------------------------------- Header --------------------------------- */
+
+[data-sileo-header] {
+	position: absolute;
+	z-index: 20;
+	display: flex;
+	align-items: center;
+	padding: 0.5rem;
+	height: var(--sileo-height);
+	width: var(--_rw);
+	overflow: hidden;
+	translate: var(--_tx, 0px) 0;
+	transform: translateY(0) scale(1);
+	/* la cabecera ES la tab: es ella la que recibe el hover y el arrastre */
+	pointer-events: auto;
+	cursor: pointer;
+	touch-action: none;
+}
+
+[data-sileo-toast][data-state="loading"] [data-sileo-header] {
+	cursor: default;
+}
+
+[data-sileo-toast][data-exiting="true"] [data-sileo-header] {
+	pointer-events: none;
+}
+
+[data-sileo-header][data-align="left"] { left: 0; }
+[data-sileo-header][data-align="right"] { right: 0; }
+[data-sileo-header][data-align="center"] {
+	left: 50%;
+	transform: translateX(-50%) translateY(0) scale(1);
+}
+
+[data-sileo-header][data-edge="top"] { bottom: 0; }
+[data-sileo-header][data-edge="bottom"] { top: 0; }
+
+/* Al expandir, el header se encoge un poco y se desplaza hacia el borde */
+[data-sileo-toast][data-expanded="true"] [data-sileo-header][data-edge="bottom"] {
+	transform: translateY(3px) scale(0.9);
+}
+[data-sileo-toast][data-expanded="true"] [data-sileo-header][data-edge="top"] {
+	transform: translateY(-3px) scale(0.9);
+}
+[data-sileo-toast][data-expanded="true"] [data-sileo-header][data-align="center"][data-edge="bottom"] {
+	transform: translateX(-50%) translateY(3px) scale(0.9);
+}
+[data-sileo-toast][data-expanded="true"] [data-sileo-header][data-align="center"][data-edge="top"] {
+	transform: translateX(-50%) translateY(-3px) scale(0.9);
+}
+
+[data-sileo-toast][data-ready="true"] [data-sileo-header] {
+	transition:
+		transform var(--sileo-duration) var(--sileo-spring-easing),
+		translate var(--sileo-duration) var(--sileo-spring-easing),
+		width var(--sileo-duration) var(--sileo-spring-easing);
+}
+
+/* Solo la tab enfocada muestra el titulo; las demas quedan en icono. El
+   overflow de la cabecera lo recorta, y la opacidad evita verlo a medias. */
+[data-sileo-toast]:not([data-focused="true"]) [data-sileo-title] {
+	opacity: 0;
+}
+
+/* En reposo solo se ve un trozo de cada tab de atras, mas estrecho que el
+   icono: mejor sin icono. Al entrar el cursor la baraja se abre y aparecen. */
+[data-sileo-viewport]:not([data-hot="true"])
+	[data-sileo-toast]:not([data-focused="true"])
+	[data-sileo-badge] {
+	opacity: 0;
+}
+
+[data-sileo-toast][data-ready="true"] [data-sileo-badge] {
+	transition: opacity calc(var(--sileo-duration) * 0.4) ease;
+}
+
+[data-sileo-toast][data-ready="true"] [data-sileo-title] {
+	transition: opacity calc(var(--sileo-duration) * 0.4) ease;
+}
+
+/* Morphing del contenido del header: dos capas cruzandose con blur */
+[data-sileo-header-stack] {
+	position: relative;
+	display: inline-flex;
+	align-items: center;
+	height: 100%;
+	/* No encoger: la cabecera tiene ancho fijo (--_rw) y recorta con overflow,
+	   pero el contenido debe conservar su ancho natural porque de ahi sale la
+	   medida --_pw del pill. Si se aplasta, la medida sale 0. */
+	flex: 0 0 auto;
+	min-width: max-content;
+}
+
+[data-sileo-header-inner] {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+	white-space: nowrap;
+	opacity: 1;
+	filter: blur(0px);
+	transform: translateZ(0);
+}
+
+[data-sileo-header-inner][data-layer="current"] {
+	position: relative;
+	z-index: 1;
+	animation: sileo-header-enter var(--sileo-duration) var(--sileo-spring-easing) both;
+}
+
+[data-sileo-header-inner][data-layer="prev"] {
+	position: absolute;
+	left: 0;
+	top: 0;
+	z-index: 0;
+	pointer-events: none;
+	animation: sileo-header-exit calc(var(--sileo-duration) * 0.7) ease forwards;
+}
+
+[data-sileo-header-inner][data-layer="prev"],
+[data-sileo-header-inner][data-layer="current"]:not(:only-child) {
+	will-change: opacity, filter;
+}
+
+/* ---------------------------------- Badge --------------------------------- */
+
+[data-sileo-badge] {
+	display: flex;
+	height: 24px;
+	width: 24px;
+	flex-shrink: 0;
+	align-items: center;
+	justify-content: center;
+	padding: 2px;
+	box-sizing: border-box;
+	border-radius: 9999px;
+	color: var(--sileo-tone, currentColor);
+	background-color: var(--sileo-tone-bg, transparent);
+}
+
+[data-sileo-badge] svg {
+	display: block;
+	width: 16px;
+	height: 16px;
+}
+
+/* ---------------------------------- Title --------------------------------- */
+
+[data-sileo-title] {
+	font-size: 0.825rem;
+	line-height: 1rem;
+	font-weight: 500;
+	text-transform: capitalize;
+	color: var(--sileo-tone, currentColor);
+}
+
+/* ------------------------------ State colors ------------------------------ */
+
+:is([data-sileo-badge], [data-sileo-title], [data-sileo-button])[data-state] {
+	--_c: var(--sileo-state-success);
+}
+:is([data-sileo-badge], [data-sileo-title], [data-sileo-button])[data-state="loading"] { --_c: var(--sileo-state-loading); }
+:is([data-sileo-badge], [data-sileo-title], [data-sileo-button])[data-state="error"]   { --_c: var(--sileo-state-error); }
+:is([data-sileo-badge], [data-sileo-title], [data-sileo-button])[data-state="warning"] { --_c: var(--sileo-state-warning); }
+:is([data-sileo-badge], [data-sileo-title], [data-sileo-button])[data-state="info"]    { --_c: var(--sileo-state-info); }
+:is([data-sileo-badge], [data-sileo-title], [data-sileo-button])[data-state="action"]  { --_c: var(--sileo-state-action); }
+
+:is([data-sileo-badge], [data-sileo-title])[data-state] {
+	--sileo-tone: var(--_c);
+	--sileo-tone-bg: color-mix(in oklch, var(--_c) 20%, transparent);
+}
+
+/* --------------------------------- Content -------------------------------- */
+
+[data-sileo-content] {
+	position: absolute;
+	left: 0;
+	z-index: 10;
+	width: 100%;
+	pointer-events: none;
+	cursor: pointer;
+	touch-action: none;
+	opacity: 0;
+}
+
+[data-sileo-content][data-edge="top"] { top: 0; }
+[data-sileo-content][data-edge="bottom"] { top: var(--sileo-height); }
+
+[data-sileo-toast][data-ready="true"] [data-sileo-content] {
+	transition: opacity calc(var(--sileo-duration) * 0.08) ease calc(var(--sileo-duration) * 0.04);
+}
+
+[data-sileo-toast][data-expanded="true"] [data-sileo-content] {
+	opacity: 1;
+	pointer-events: auto;
+}
+
+[data-sileo-toast][data-ready="true"][data-expanded="true"] [data-sileo-content] {
+	transition: opacity calc(var(--sileo-duration) * 0.6) ease calc(var(--sileo-duration) * 0.3);
+}
+
+[data-sileo-description] {
+	width: 100%;
+	text-align: left;
+	padding: 1rem;
+	font-size: 0.875rem;
+	line-height: 1.25rem;
+	color: var(--sileo-desc-color, rgba(0, 0, 0, 0.5));
+	contain: layout style paint;
+}
+
+/* --------------------------------- Button --------------------------------- */
+
+[data-sileo-button] {
+	display: flex;
+	width: fit-content;
+	align-items: center;
+	justify-content: center;
+	height: 1.75rem;
+	padding: 0 0.625rem;
+	margin-top: 0.75rem;
+	border-radius: 9999px;
+	border: 0;
+	font: inherit;
+	font-size: 0.75rem;
+	font-weight: 500;
+	text-decoration: none;
+	cursor: pointer;
+	color: var(--sileo-btn-color, currentColor);
+	background-color: var(--sileo-btn-bg, transparent);
+	transition: background-color 150ms ease;
+}
+
+[data-sileo-button][data-state] {
+	--sileo-btn-color: var(--_c);
+	--sileo-btn-bg: color-mix(in oklch, var(--_c) 15%, transparent);
+	--sileo-btn-bg-hover: color-mix(in oklch, var(--_c) 25%, transparent);
+}
+
+/* Mismo blindaje para el boton de accion: es un <a>, y `a:hover {...}` del host
+   le ganaria. El color va aqui, no en el bloque de arriba, por especificidad. */
+[data-sileo-viewport] [data-sileo-button],
+[data-sileo-viewport] [data-sileo-button]:focus,
+[data-sileo-viewport] [data-sileo-button]:active {
+	border: 0;
+	box-shadow: none;
+	text-decoration: none;
+	color: var(--sileo-btn-color, currentColor);
+	background-color: var(--sileo-btn-bg, transparent);
+}
+
+[data-sileo-viewport] [data-sileo-button]:hover {
+	color: var(--sileo-btn-color, currentColor);
+	background-color: var(--sileo-btn-bg-hover, transparent);
+}
+
+/* -------------------------------- Animations ------------------------------ */
+
+[data-sileo-icon="spin"] {
+	animation: sileo-spin 1s linear infinite;
+}
+
+@keyframes sileo-spin {
+	to { transform: rotate(360deg); }
+}
+
+@keyframes sileo-header-enter {
+	from { opacity: 0; filter: blur(6px); }
+	to   { opacity: 1; filter: blur(0px); }
+}
+
+@keyframes sileo-header-exit {
+	from { opacity: 1; filter: blur(0px); }
+	to   { opacity: 0; filter: blur(6px); }
+}
+
+/* --------------------------------- Themes -------------------------------- */
+
+[data-sileo-viewport][data-theme="light"] {
+	--sileo-fill: #1a1a1a;
+	--sileo-desc-color: rgba(255, 255, 255, 0.5);
+}
+[data-sileo-viewport][data-theme="dark"] {
+	--sileo-fill: #f2f2f2;
+	--sileo-desc-color: rgba(0, 0, 0, 0.5);
+}
+
+/* ------------------------------- A11y motion ------------------------------ */
+
+@media (prefers-reduced-motion: no-preference) {
+	[data-sileo-toast][data-ready="true"]:hover,
+	[data-sileo-toast][data-ready="true"][data-exiting="true"] {
+		will-change: transform, opacity, height;
+	}
+}
+
+@media (prefers-reduced-motion: reduce) {
+	[data-sileo-viewport],
+	[data-sileo-viewport] *,
+	[data-sileo-viewport] *::before,
+	[data-sileo-viewport] *::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
+}

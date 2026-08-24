@@ -1,0 +1,420 @@
+<!doctype html>
+<html lang="es">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Sileo · vanilla JS</title>
+		<link rel="stylesheet" href="../src/sileo.css" />
+		<style>
+			* { box-sizing: border-box; }
+			body {
+				margin: 0;
+				min-height: 100vh;
+				display: grid;
+				place-items: center;
+				background: #0b0b0c;
+				color: #ededed;
+				font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+			}
+			main { width: min(560px, 92vw); padding: 2rem 0; }
+			h1 { font-size: 1.5rem; margin: 0 0 0.25rem; letter-spacing: -0.02em; }
+			p.lead { margin: 0 0 2rem; color: #8b8b8f; font-size: 0.9rem; line-height: 1.5; }
+			h2 {
+				font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
+				color: #6c6c70; margin: 1.75rem 0 0.6rem;
+			}
+			.row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+			/* Scopeado a .row: un `button {}` suelto tambien alcanzaria la raiz del
+			   toast, que es un <button>. */
+			.row button {
+				appearance: none; cursor: pointer; font: inherit; font-size: 0.8rem;
+				padding: 0.45rem 0.8rem; border-radius: 9999px;
+				border: 1px solid #26262a; background: #16161a; color: #ededed;
+				transition: background 140ms ease, border-color 140ms ease;
+			}
+			.row button:hover { background: #1e1e23; border-color: #34343a; }
+			select {
+				font: inherit; font-size: 0.8rem; padding: 0.45rem 0.6rem;
+				border-radius: 9999px; border: 1px solid #26262a;
+				background: #16161a; color: #ededed;
+			}
+			code {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.8rem; color: #a5a5ab;
+			}
+
+			/* Pestañas de código */
+			.tablist { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; }
+			.tablist button {
+				appearance: none; cursor: pointer; font: inherit; font-size: 0.78rem;
+				padding: 0.35rem 0.7rem; border-radius: 9999px;
+				border: 1px solid transparent; background: transparent; color: #8b8b8f;
+				transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+			}
+			.tablist button:hover { color: #ededed; background: #16161a; }
+			.tablist button[aria-selected="true"] {
+				color: #ededed; background: #1b1b20; border-color: #34343a;
+			}
+			pre[role="tabpanel"] {
+				margin: 0; padding: 0.9rem 1rem;
+				border: 1px solid #1e1e23; border-radius: 0.75rem; background: #0e0e11;
+				overflow-x: auto; color: #c9c9cf;
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.78rem; line-height: 1.55;
+			}
+			pre[role="tabpanel"][hidden] { display: none; }
+		</style>
+	</head>
+	<body>
+		<main>
+			<h1>Sileo</h1>
+			<p class="lead">
+				Toast con morphing gooey y spring physics. Core vanilla, cero dependencias,
+				toda la animación en CSS. Varios toasts forman una fila de pestañas
+				solapadas a la altura del título: pasa el cursor por encima y la del frente
+				abre su mensaje; muévelo a otro círculo y el enfoque salta a esa tab, que se
+				ensancha para mostrar su título. Arrastra un toast para descartarlo.
+			</p>
+
+			<h2>Estados</h2>
+			<div class="row">
+				<button data-demo="success">success</button>
+				<button data-demo="error">error</button>
+				<button data-demo="warning">warning</button>
+				<button data-demo="info">info</button>
+				<button data-demo="action">action</button>
+			</div>
+
+			<h2>Composición</h2>
+			<div class="row">
+				<button data-demo="button">con botón</button>
+				<button data-demo="icon">icono propio</button>
+				<button data-demo="plain">solo título</button>
+				<button data-demo="long">descripción larga</button>
+				<button data-demo="roundness">roundness 24</button>
+			</div>
+
+			<h2>Promesa</h2>
+			<div class="row">
+				<button data-demo="promise">resuelve</button>
+				<button data-demo="promise-fail">falla</button>
+				<button data-demo="promise-action">→ action</button>
+			</div>
+
+			<h2>Control</h2>
+			<div class="row">
+				<select id="position">
+					<option>top-left</option>
+					<option>top-center</option>
+					<option selected>top-right</option>
+					<option>bottom-left</option>
+					<option>bottom-center</option>
+					<option>bottom-right</option>
+				</select>
+				<select id="theme">
+					<option value="system" selected>theme: system</option>
+					<option value="dark">theme: dark</option>
+					<option value="light">theme: light</option>
+				</select>
+				<button data-demo="stack">apilar 3</button>
+				<button data-demo="stack5">apilar 5</button>
+				<button data-demo="clear">clear()</button>
+			</div>
+
+			<h2>Uso</h2>
+			<p class="lead">
+				El core es vanilla: en cualquier framework se monta el toaster una vez y
+				se llama a <code>sileo.*()</code> desde donde sea.
+			</p>
+
+			<div class="tablist" role="tablist" aria-label="Frameworks">
+				<button type="button" role="tab" id="tab-vanilla" aria-controls="code-vanilla" aria-selected="true">Vanilla</button>
+				<button type="button" role="tab" id="tab-vue-global" aria-controls="code-vue-global" aria-selected="false" tabindex="-1">Vue 3 global</button>
+				<button type="button" role="tab" id="tab-vue" aria-controls="code-vue" aria-selected="false" tabindex="-1">Vue 3 componente</button>
+				<button type="button" role="tab" id="tab-react" aria-controls="code-react" aria-selected="false" tabindex="-1">React</button>
+				<button type="button" role="tab" id="tab-svelte" aria-controls="code-svelte" aria-selected="false" tabindex="-1">Svelte</button>
+				<button type="button" role="tab" id="tab-angular" aria-controls="code-angular" aria-selected="false" tabindex="-1">Angular</button>
+			</div>
+
+<pre role="tabpanel" id="code-vanilla" aria-labelledby="tab-vanilla" tabindex="0"><code>import { sileo, createToaster } from "sileo-js";
+import "sileo-js/styles.css";
+
+// una sola vez, al arrancar la app
+createToaster({ position: "top-right", theme: "system" });
+
+sileo.success({
+  title: "Guardado",
+  description: "Tus cambios se sincronizaron.",
+});</code></pre>
+
+<pre role="tabpanel" id="code-vue-global" aria-labelledby="tab-vue-global" tabindex="0" hidden><code>// main.js — el plugin monta el toaster y deja $sileo global
+import { createApp } from "vue";
+import { SileoPlugin } from "sileo-js/vue";
+import "sileo-js/styles.css";
+import App from "./App.vue";
+
+createApp(App)
+  .use(SileoPlugin, { position: "top-right", theme: "system" })
+  .mount("#app");
+
+
+&lt;!-- cualquier componente: sin imports, sin &lt;SileoToaster /&gt; --&gt;
+&lt;template&gt;
+  &lt;button @click="$sileo.success({ title: 'Guardado' })"&gt;
+    Guardar
+  &lt;/button&gt;
+&lt;/template&gt;
+
+&lt;!-- y en &lt;script setup&gt;, donde no llega $sileo: --&gt;
+&lt;script setup&gt;
+import { sileo } from "sileo-js";        // o inject("sileo")
+&lt;/script&gt;</code></pre>
+
+<pre role="tabpanel" id="code-vue" aria-labelledby="tab-vue" tabindex="0" hidden><code>&lt;script setup&gt;
+import { SileoToaster } from "sileo-js/vue";
+import { sileo } from "sileo-js";
+import "sileo-js/styles.css";
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;SileoToaster position="top-right" theme="system" /&gt;
+
+  &lt;button @click="sileo.success({ title: 'Guardado' })"&gt;
+    Guardar
+  &lt;/button&gt;
+&lt;/template&gt;</code></pre>
+
+<pre role="tabpanel" id="code-react" aria-labelledby="tab-react" tabindex="0" hidden><code>import { useEffect } from "react";
+import { sileo, createToaster } from "sileo-js";
+import "sileo-js/styles.css";
+
+export default function App() {
+  useEffect(() =&gt; {
+    const toaster = createToaster({ position: "top-right" });
+    return () =&gt; toaster.destroy();
+  }, []);
+
+  return (
+    &lt;button onClick={() =&gt; sileo.success({ title: "Guardado" })}&gt;
+      Guardar
+    &lt;/button&gt;
+  );
+}</code></pre>
+
+<pre role="tabpanel" id="code-svelte" aria-labelledby="tab-svelte" tabindex="0" hidden><code>&lt;script&gt;
+  import { onMount } from "svelte";
+  import { sileo, createToaster } from "sileo-js";
+  import "sileo-js/styles.css";
+
+  onMount(() =&gt; {
+    const toaster = createToaster({ position: "top-right" });
+    return () =&gt; toaster.destroy();
+  });
+&lt;/script&gt;
+
+&lt;button on:click={() =&gt; sileo.success({ title: "Guardado" })}&gt;
+  Guardar
+&lt;/button&gt;</code></pre>
+
+<pre role="tabpanel" id="code-angular" aria-labelledby="tab-angular" tabindex="0" hidden><code>// angular.json -&gt; styles: ["node_modules/sileo-js/src/sileo.css"]
+import { Component, OnInit, OnDestroy } from "@angular/core";
+import { sileo, createToaster } from "sileo-js";
+
+@Component({
+  selector: "app-root",
+  template: `&lt;button (click)="guardar()"&gt;Guardar&lt;/button&gt;`,
+})
+export class AppComponent implements OnInit, OnDestroy {
+  private toaster?: ReturnType&lt;typeof createToaster&gt;;
+
+  ngOnInit() {
+    this.toaster = createToaster({ position: "top-right" });
+  }
+
+  ngOnDestroy() {
+    this.toaster?.destroy();
+  }
+
+  guardar() {
+    sileo.success({ title: "Guardado" });
+  }
+}</code></pre>
+		</main>
+
+		<script type="module">
+			import { sileo, createToaster } from "../src/sileo.js";
+
+			let toaster = createToaster({ position: "top-right", theme: "system" });
+
+			const heart =
+				'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>';
+
+			const wait = (ms, ok = true) =>
+				new Promise((res, rej) => setTimeout(ok ? res : rej, ms, ok ? "ok" : new Error("nope")));
+
+			const demos = {
+				success: () =>
+					sileo.success({
+						id: "s",
+						title: "Guardado",
+						description: "Tus cambios se sincronizaron con el servidor.",
+					}),
+				error: () =>
+					sileo.error({
+						id: "e",
+						title: "Error",
+						description: "No pudimos conectar. Revisa tu red e inténtalo de nuevo.",
+					}),
+				warning: () =>
+					sileo.warning({
+						id: "w",
+						title: "Cuidado",
+						description: "Tu sesión expira en 2 minutos.",
+					}),
+				info: () =>
+					sileo.info({
+						id: "i",
+						title: "Info",
+						description: "Hay una versión nueva disponible.",
+					}),
+				action: () =>
+					sileo.action({
+						id: "a",
+						title: "Invitación",
+						description: "Ana te invitó al espacio Diseño.",
+						button: { title: "Abrir", onClick: () => sileo.success({ title: "Abierto" }) },
+					}),
+
+				button: () =>
+					sileo.success({
+						id: "btn",
+						title: "Archivo subido",
+						description: "reporte-q3.pdf · 2.4 MB",
+						button: { title: "Ver archivo", onClick: () => alert("ver") },
+					}),
+				icon: () =>
+					sileo.info({
+						id: "ic",
+						title: "Gracias",
+						icon: { html: heart },
+						description: "Icono personalizado vía { html }.",
+					}),
+				plain: () => sileo.success({ id: "p", title: "Listo" }),
+				long: () =>
+					sileo.info({
+						id: "l",
+						title: "Cambios",
+						description:
+							"La altura del panel se mide con ResizeObserver y se publica como --_ch; el resto (altura de la raíz, del pill y del cuerpo) lo resuelve CSS con max() y calc(), así que el spring es una transición nativa.",
+					}),
+				roundness: () =>
+					sileo.warning({
+						id: "r",
+						title: "Roundness",
+						roundness: 24,
+						description: "El blur del filtro gooey escala con el roundness.",
+					}),
+
+				promise: () =>
+					sileo.promise(() => wait(1800), {
+						loading: { id: "pr", title: "Subiendo", description: "Enviando archivo…" },
+						success: () => ({ title: "Subido", description: "Archivo disponible." }),
+						error: () => ({ title: "Falló", description: "Intenta de nuevo." }),
+					}).catch(() => {}),
+				"promise-fail": () =>
+					sileo.promise(() => wait(1500, false), {
+						loading: { id: "pf", title: "Guardando", description: "Un momento…" },
+						success: () => ({ title: "Guardado" }),
+						error: (err) => ({ title: "Error", description: String(err.message) }),
+					}).catch(() => {}),
+				"promise-action": () =>
+					sileo.promise(() => wait(1500), {
+						loading: { id: "pa", title: "Procesando", description: "Generando reporte…" },
+						success: () => ({ title: "Listo" }),
+						error: () => ({ title: "Error" }),
+						action: () => ({
+							title: "Reporte listo",
+							description: "Ya puedes descargarlo.",
+							button: { title: "Descargar", onClick: () => sileo.success({ title: "Descargado" }) },
+						}),
+					}).catch(() => {}),
+
+				stack: () => {
+					sileo.success({ id: "k1", title: "Uno", description: "Primer toast." });
+					setTimeout(
+						() => sileo.info({ id: "k2", title: "Dos", description: "Segundo toast." }),
+						350,
+					);
+					setTimeout(
+						() => sileo.warning({ id: "k3", title: "Tres", description: "Tercer toast." }),
+						700,
+					);
+				},
+				stack5: () => {
+					const kinds = [sileo.success, sileo.info, sileo.warning, sileo.error, sileo.action];
+					const names = ["Uno", "Dos", "Tres", "Cuatro", "Cinco"];
+					names.forEach((name, i) => {
+						setTimeout(
+							() =>
+								kinds[i]({
+									id: `s${i}`,
+									title: name,
+									description: `Mensaje de la tab ${name.toLowerCase()}. Solo se ven
+										las primeras tres del stack.`,
+								}),
+							i * 300,
+						);
+					});
+				},
+				clear: () => sileo.clear(),
+			};
+
+			for (const btn of document.querySelectorAll("[data-demo]")) {
+				btn.addEventListener("click", () => demos[btn.dataset.demo]?.());
+			}
+
+			const position = document.getElementById("position");
+			const theme = document.getElementById("theme");
+			const sync = () =>
+				toaster.set({ position: position.value, theme: theme.value });
+			position.addEventListener("change", () => {
+				sync();
+				sileo.clear();
+			});
+			theme.addEventListener("change", sync);
+
+			/* ------------------------------ Pestañas de código ------------------------ */
+			const tablist = document.querySelector('[role="tablist"]');
+			const tabs = [...tablist.querySelectorAll('[role="tab"]')];
+
+			const select = (tab) => {
+				for (const t of tabs) {
+					const on = t === tab;
+					t.setAttribute("aria-selected", String(on));
+					t.tabIndex = on ? 0 : -1;
+					document.getElementById(t.getAttribute("aria-controls")).hidden = !on;
+				}
+			};
+
+			tablist.addEventListener("click", (e) => {
+				const tab = e.target.closest('[role="tab"]');
+				if (tab) select(tab);
+			});
+
+			// Navegación con flechas dentro del tablist (patrón WAI-ARIA)
+			const STEP = { ArrowRight: 1, ArrowLeft: -1 };
+			tablist.addEventListener("keydown", (e) => {
+				const i = tabs.indexOf(document.activeElement);
+				if (i < 0) return;
+				let next = null;
+				if (e.key in STEP) next = (i + STEP[e.key] + tabs.length) % tabs.length;
+				else if (e.key === "Home") next = 0;
+				else if (e.key === "End") next = tabs.length - 1;
+				if (next === null) return;
+				e.preventDefault();
+				tabs[next].focus();
+				select(tabs[next]);
+			});
+		</script>
+	</body>
+</html>

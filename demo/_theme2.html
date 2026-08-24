@@ -1,0 +1,26 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><link rel="stylesheet" href="../src/sileo.css">
+<style>body{margin:0;background:#0b0b0c;color:#fff}</style></head><body><pre id="log" style="font:12px monospace"></pre>
+<script>addEventListener("error",e=>document.getElementById("log").textContent="ERR "+e.message+" @"+e.filename+":"+e.lineno);
+addEventListener("unhandledrejection",e=>document.getElementById("log").textContent="REJ "+(e.reason&&e.reason.stack||e.reason));</script>
+<script type="module">
+import { sileo, createToaster } from "../src/sileo.js";
+const out = [];
+const t = createToaster({ theme: "system" });
+sileo.info({ id: "x", title: "Hola", description: "Prueba.", duration: null, autopilot: false });
+await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+const vp = () => document.querySelector("[data-sileo-viewport]");
+const read = () => {
+  const el = document.querySelector("[data-sileo-toast]");
+  const cs = getComputedStyle(el);
+  return `data-theme=${vp().dataset.theme} fill=${cs.getPropertyValue("--sileo-fill").trim()} desc=${getComputedStyle(el.querySelector("[data-sileo-description]")).color} inline=${el.style.getPropertyValue("--sileo-fill") || "(ninguno)"}`;
+};
+out.push("prefers-color-scheme: " + (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"));
+out.push("system -> " + read());
+t.set({ theme: "dark" });   out.push("dark   -> " + read());
+t.set({ theme: "light" });  out.push("light  -> " + read());
+sileo.success({ id: "y", title: "Propio", description: "fill propio.", fill: "#3b1d5e", duration: null, autopilot: false });
+await new Promise((r) => requestAnimationFrame(r));
+out.push("fill propio -> " + getComputedStyle(document.querySelector('[aria-label="Propio"]')).getPropertyValue("--sileo-fill").trim());
+document.getElementById("log").textContent = out.join(String.fromCharCode(10));
+</script></body></html>

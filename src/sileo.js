@@ -1,0 +1,1001 @@
+/**
+ * Sileo (vanilla) - toast con morphing gooey y spring physics.
+ *
+ * Cero dependencias, funciona con cualquier framework JS.
+ * El JS solo hace: estado, DOM, medicion (2 numeros) y timers.
+ * Todo el movimiento esta en sileo.css.
+ */
+
+/* --------------------------------- Layout --------------------------------- */
+const HEIGHT = 40;
+const DEFAULT_ROUNDNESS = 16;
+const PILL_PADDING = 10;
+const BLUR_RATIO = 0.5;
+const MIN_EXPAND_RATIO = 2.25; // espeja el max() de --_exp en el CSS
+
+/* ---------------------------------- Stack --------------------------------- */
+/* Valores de respaldo si el CSS no esta cargado; el CSS es la fuente real. */
+const TAB_OVERLAP = 12;
+const STACK_MAX = 3;
+const HOVER_LEAVE_MS = 140;
+
+/* --------------------------------- Timing --------------------------------- */
+const DURATION_MS = 600;
+const DEFAULT_TOAST_DURATION = 6000;
+const EXIT_DURATION = DEFAULT_TOAST_DURATION * 0.1; // 600ms
+const AUTO_EXPAND_DELAY = DEFAULT_TOAST_DURATION * 0.025; // 150ms
+const AUTO_COLLAPSE_DELAY = DEFAULT_TOAST_DURATION - 2000; // 4000ms
+const SWAP_COLLAPSE_MS = 200;
+const HEADER_EXIT_MS = DURATION_MS * 0.7;
+
+/* --------------------------------- Swipe ---------------------------------- */
+const SWIPE_DISMISS = 30;
+const SWIPE_MAX = 20;
+
+export const SILEO_POSITIONS = [
+	"top-left",
+	"top-center",
+	"top-right",
+	"bottom-left",
+	"bottom-center",
+	"bottom-right",
+];
+
+export const SILEO_STATES = [
+	"success",
+	"loading",
+	"error",
+	"warning",
+	"info",
+	"action",
+];
+
+/* ---------------------------------- Icons --------------------------------- */
+
+const svg = (body, extra = "") =>
+	`<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"${extra}>${body}</svg>`;
+
+export const STATE_ICON = {
+	success: svg('<path d="M20 6 9 17l-5-5"/>'),
+	loading: svg('<path d="M21 12a9 9 0 1 1-6.219-8.56"/>', ' data-sileo-icon="spin"'),
+	error: svg('<path d="M18 6 6 18"/><path d="m6 6 12 12"/>'),
+	warning: svg(
+		'<circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>',
+	),
+	info: svg(
+		'<circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 4.24 4.24"/><path d="m14.83 9.17 4.24-4.24"/><path d="m14.83 14.83 4.24 4.24"/><path d="m9.17 14.83-4.24 4.24"/><circle cx="12" cy="12" r="4"/>',
+	),
+	action: svg('<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>'),
+};
+
+/* ------------------------------ Gooey filter ------------------------------ */
+/*
+ * Metaballs: blur -> umbral de alfa -> se tine con el color de relleno.
+ *
+ * El umbral (alfa x20 -10) convierte el blur en un borde duro, y ahi es donde
+ * dos formas cercanas se funden. Pero el blur tambien ensucia el RGB: en sRGB
+ * sin premultiplicar, lo transparente es negro, asi que el puente salia gris
+ * oscuro. Por eso el color no se toma del blur: se inunda con --sileo-fill y se
+ * recorta con el alfa del umbral. El SourceGraphic va encima para que las
+ * formas conserven el borde nitido.
+ *
+ * Va un filtro por toast (no uno global) porque flood-color se resuelve con el
+ * --sileo-fill de ese toast, que depende del tema.
+ */
+
+const SVG_NS = "http://www.w3.org/2000/svg";
+let gooSeq = 0;
+
+function gooDefs(blur) {
+	const id = `sileo-goo-${++gooSeq}`;
+	const svg = document.createElementNS(SVG_NS, "svg");
+	svg.setAttribute("aria-hidden", "true");
+	svg.setAttribute("width", "0");
+	svg.setAttribute("height", "0");
+	svg.setAttribute("data-sileo-defs", "");
+	svg.innerHTML =
+		`<filter id="${id}" x="-20%" y="-20%" width="140%" height="140%" color-interpolation-filters="sRGB">` +
+		`<feGaussianBlur in="SourceGraphic" stdDeviation="${blur}" result="blur"/>` +
+		`<feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 20 -10" result="goo"/>` +
+		`<feFlood data-sileo-goo-flood result="flood"/>` +
+		`<feComposite in="flood" in2="goo" operator="in" result="tint"/>` +
+		`<feComposite in="SourceGraphic" in2="tint" operator="over"/>` +
+		`</filter>`;
+	return { svg, id, blur: svg.querySelector("feGaussianBlur") };
+}
+
+/* --------------------------------- Helpers -------------------------------- */
+
+const el = (tag, attrs) => {
+	const node = document.createElement(tag);
+	for (const k in attrs) {
+		if (attrs[k] != null) node.setAttribute(k, attrs[k]);
+	}
+	return node;
+};
+
+const pillAlign = (pos) =>
+	pos.includes("right") ? "right" : pos.includes("center") ? "center" : "left";
+
+const expandDir = (pos) => (pos.startsWith("top") ? "bottom" : "top");
+
+/** Acepta string, Node o {html}. */
+function fill(node, value) {
+	node.textContent = "";
+	if (value == null || value === false) return;
+	if (value instanceof Node) node.appendChild(value);
+	else if (typeof value === "object" && typeof value.html === "string")
+		node.insertAdjacentHTML("afterbegin", value.html);
+	else node.appendChild(document.createTextNode(String(value)));
+}
+
+/* =========================================================================== */
+/*                                    Toast                                    */
+/* =========================================================================== */
+
+class SileoToast {
+	constructor(item, host) {
+		this.host = host;
+		this.id = item.id;
+		this.pos = item.position;
+		this.align = pillAlign(item.position);
+		this.edge = expandDir(item.position);
+		this.view = null;
+		this.ready = false;
+		this.expanded = false;
+		this.exiting = false;
+		this.allowExpand = true;
+		this.pad = 0;
+		this.pillW = 0;
+		this.contentH = 0;
+		this.pending = null;
+		this.timers = {};
+
+		/* ------------------------------- Estructura ------------------------------ */
+		const root = el("button", {
+			type: "button",
+			"data-sileo-toast": "",
+			"data-edge": this.edge,
+			"aria-atomic": "true",
+		});
+
+		const canvas = el("div", {
+			"data-sileo-canvas": "",
+			"data-edge": this.edge,
+		});
+		this.goo = gooDefs(DEFAULT_ROUNDNESS * BLUR_RATIO);
+		canvas.appendChild(this.goo.svg);
+		canvas.appendChild(el("div", { "data-sileo-pill": "", "data-align": this.align }));
+		canvas.appendChild(el("div", { "data-sileo-body": "" }));
+
+		const header = el("div", {
+			"data-sileo-header": "",
+			"data-edge": this.edge,
+			"data-align": this.align,
+		});
+		const stack = el("div", { "data-sileo-header-stack": "" });
+		header.appendChild(stack);
+
+		const content = el("div", {
+			"data-sileo-content": "",
+			"data-edge": this.edge,
+		});
+		const desc = el("div", { "data-sileo-description": "" });
+		content.appendChild(desc);
+
+		root.append(canvas, header, content);
+
+		this.root = root;
+		this.header = header;
+		this.stack = stack;
+		this.content = content;
+		this.desc = desc;
+
+		/* ------------------------------- Interaccion ----------------------------- */
+		/* La raiz de todas las tabs ocupa la franja completa, asi que el puntero
+		   lo capturan la cabecera (la tab en si) y el panel. El pointerleave lo
+		   escucha el viewport, no cada tab, para que moverse de una tab a otra no
+		   colapse el stack. */
+		for (const target of [header, content]) {
+			target.addEventListener("pointerenter", () => {
+				this.host._focus(this.pos, this.id);
+			});
+			target.addEventListener("pointerdown", (e) => this._down(e));
+		}
+		root.addEventListener("focusin", () => {
+			this.host._setHot(this.pos, true);
+			this.host._focus(this.pos, this.id);
+		});
+
+		/* -------------------------------- Medicion ------------------------------- */
+		this.ro = new ResizeObserver(() => {
+			cancelAnimationFrame(this.raf);
+			this.raf = requestAnimationFrame(() => this._measure());
+		});
+		this.ro.observe(desc);
+
+		this.apply(item);
+
+		// Primer frame sin transiciones -> luego se habilitan (entrada CSS).
+		requestAnimationFrame(() => {
+			this.ready = true;
+			root.setAttribute("data-ready", "true");
+		});
+	}
+
+	/* ------------------------------ Vista / datos ----------------------------- */
+
+	apply(item) {
+		const state = item.state || "success";
+		const title = item.title != null ? item.title : state;
+		const hasDesc = Boolean(item.description) || Boolean(item.button);
+		const roundness = Math.max(
+			0,
+			item.roundness != null ? item.roundness : DEFAULT_ROUNDNESS,
+		);
+
+		this.item = item;
+		this.state = state;
+		this.hasDesc = hasDesc;
+		this.isLoading = state === "loading";
+
+		const root = this.root;
+		root.setAttribute("data-state", state);
+		root.setAttribute("data-has-desc", String(hasDesc));
+		root.setAttribute("aria-label", title);
+		root.style.setProperty("--sileo-roundness", `${roundness}px`);
+		this.goo.blur.setAttribute("stdDeviation", String(roundness * BLUR_RATIO));
+		root.style.setProperty("--sileo-goo", `url(#${this.goo.id})`);
+		this.setFill(item.fill);
+		if (item.className) root.className = item.className;
+
+		this._header(state, title, item);
+		this._content(item, state);
+
+		if (this.isLoading) this.close();
+		this._measure();
+		this._autopilot();
+	}
+
+	/** Header con crossfade+blur entre estados (dos capas, animacion CSS). */
+	_header(state, title, item) {
+		const key = `${state}-${title}`;
+		if (this.headerKey === key) {
+			// mismo estado/titulo: solo refrescar icono si cambio
+			this.headerKey = key;
+			return;
+		}
+
+		const prev = this.stack.querySelector('[data-sileo-header-inner][data-layer="current"]');
+		if (prev) {
+			prev.setAttribute("data-layer", "prev");
+			clearTimeout(this.timers.headerExit);
+			this.timers.headerExit = setTimeout(() => prev.remove(), HEADER_EXIT_MS);
+		}
+
+		const inner = el("div", {
+			"data-sileo-header-inner": "",
+			"data-layer": "current",
+		});
+		const badge = el("div", { "data-sileo-badge": "", "data-state": state });
+		if (item.styles?.badge) badge.className = item.styles.badge;
+		if (item.icon != null) fill(badge, item.icon);
+		else badge.insertAdjacentHTML("afterbegin", STATE_ICON[state] || STATE_ICON.success);
+
+		const label = el("span", { "data-sileo-title": "", "data-state": state });
+		if (item.styles?.title) label.className = item.styles.title;
+		label.textContent = title;
+
+		inner.append(badge, label);
+		this.stack.appendChild(inner);
+
+		if (this.inner) this.ro.unobserve(this.inner);
+		this.inner = inner;
+		this.ro.observe(inner);
+		this.headerKey = key;
+	}
+
+	_content(item, state) {
+		fill(this.desc, item.description);
+		if (item.styles?.description) this.desc.className = item.styles.description;
+
+		if (item.button) {
+			// <a> y no <button>: el toast ya es un <button>
+			const btn = el("a", {
+				href: "#",
+				role: "button",
+				"data-sileo-button": "",
+				"data-state": state,
+			});
+			if (item.styles?.button) btn.className = item.styles.button;
+			btn.textContent = item.button.title;
+			btn.addEventListener("click", (e) => {
+				e.preventDefault();
+				e.stopPropagation();
+				item.button.onClick?.();
+			});
+			this.desc.appendChild(btn);
+		}
+	}
+
+	/**
+	 * Actualiza un toast vivo. Si esta abierto, colapsa primero y cambia el
+	 * contenido a mitad de camino (evita el salto de altura).
+	 */
+	update(item) {
+		clearTimeout(this.timers.swap);
+		if (this.expanded) {
+			this.pending = item;
+			this.close();
+			this.timers.swap = setTimeout(() => {
+				const p = this.pending;
+				this.pending = null;
+				if (p) this.apply(p);
+			}, SWAP_COLLAPSE_MS);
+		} else {
+			this.apply(item);
+		}
+	}
+
+	/* -------------------------------- Medicion -------------------------------- */
+
+	_measure() {
+		if (!this.pad && this.header.isConnected) {
+			const cs = getComputedStyle(this.header);
+			this.pad =
+				parseFloat(cs.paddingLeft || 0) + parseFloat(cs.paddingRight || 0);
+		}
+		let dirty = false;
+		if (this.inner) {
+			const w = this.inner.scrollWidth + this.pad + PILL_PADDING;
+			if (w > PILL_PADDING && w !== this.pillW) {
+				this.pillW = w;
+				this.root.style.setProperty("--_pw", `${w}px`);
+				dirty = true; // el ancho de la tab enfocada corre a las de atras
+			}
+		}
+		const h = this.hasDesc ? this.desc.scrollHeight : 0;
+		if (h !== this.contentH) {
+			this.contentH = h;
+			this.root.style.setProperty("--_ch", `${h}px`);
+			dirty = true; // el alto del panel cambia el alto del stack
+		}
+		if (dirty) this.host._layout(this.pos);
+	}
+
+	/** Color del panel. Puede cambiar sin rehacer el toast (cambio de tema). */
+	setFill(fill) {
+		if (!fill || fill === this.fill) return;
+		this.fill = fill;
+		this.root.style.setProperty("--sileo-fill", fill);
+	}
+
+	/* ---------------------------------- Slot ---------------------------------- */
+
+	/** Alto que ocupa esta tab en el stack. Espeja --_exp del CSS. */
+	slotHeight(h) {
+		if (!this.expanded) return h;
+		return Math.max(h * MIN_EXPAND_RATIO, h + this.contentH);
+	}
+
+	/** Puesto en la fila: i = profundidad en z, tx = corrimiento horizontal. */
+	setSlot({ i, tx, focused, hidden }) {
+		const style = this.root.style;
+		style.setProperty("--_i", String(i));
+		style.setProperty("--_tx", `${Math.round(tx)}px`);
+		this.root.setAttribute("data-focused", String(focused));
+		if (hidden) this.root.setAttribute("data-hidden", "true");
+		else this.root.removeAttribute("data-hidden");
+	}
+
+	/* ------------------------------ Expand / close ---------------------------- */
+
+	open() {
+		if (!this.hasDesc || this.isLoading || this.exiting || !this.allowExpand) return;
+		if (this.expanded) return;
+		this.expanded = true;
+		this.root.setAttribute("data-expanded", "true");
+		this.host._layout(this.pos);
+	}
+
+	close() {
+		if (!this.expanded) return;
+		this.expanded = false;
+		this.root.setAttribute("data-expanded", "false");
+		this.host._layout(this.pos);
+	}
+
+	setAllowExpand(value) {
+		this.allowExpand = value;
+		if (!value) this.close();
+	}
+
+	/** Con el cursor encima manda el cursor: el autopilot deja de contar. */
+	cancelAutopilot() {
+		clearTimeout(this.timers.expand);
+		clearTimeout(this.timers.collapse);
+	}
+
+	_autopilot() {
+		this.cancelAutopilot();
+		if (!this.hasDesc || this.exiting || !this.allowExpand) return;
+
+		const { autoExpandDelayMs: a, autoCollapseDelayMs: b } = this.item;
+		if (a == null && b == null) return;
+
+		if (a > 0) this.timers.expand = setTimeout(() => this.open(), a);
+		else this.open();
+		if (b > 0) this.timers.collapse = setTimeout(() => this.close(), b);
+	}
+
+	/* --------------------------------- Swipe ---------------------------------- */
+
+	_down(e) {
+		if (this.exiting) return;
+		if (e.target.closest?.("[data-sileo-button]")) return;
+
+		// El arrastre mueve la raiz, pero captura y escucha en el elemento que
+		// recibio el pointerdown: la raiz tiene pointer-events: none.
+		const root = this.root;
+		const grip = e.currentTarget;
+		const start = e.clientY;
+		grip.setPointerCapture?.(e.pointerId);
+
+		const move = (ev) => {
+			const dy = ev.clientY - start;
+			if (!this.swiping && Math.abs(dy) < 2) return;
+			this.swiping = true;
+			root.setAttribute("data-swiping", "true");
+			const clamped = Math.min(Math.abs(dy), SWIPE_MAX) * (dy > 0 ? 1 : -1);
+			root.style.setProperty("--_sy", `${clamped}px`);
+		};
+
+		const up = (ev) => {
+			grip.removeEventListener("pointermove", move);
+			grip.removeEventListener("pointerup", up);
+			grip.removeEventListener("pointercancel", up);
+			const dy = ev.clientY - start;
+			this.swiping = false;
+			root.removeAttribute("data-swiping");
+			root.style.removeProperty("--_sy");
+			if (Math.abs(dy) > SWIPE_DISMISS) dismissToast(this.id);
+		};
+
+		grip.addEventListener("pointermove", move, { passive: true });
+		grip.addEventListener("pointerup", up, { passive: true });
+		grip.addEventListener("pointercancel", up, { passive: true });
+	}
+
+	/* --------------------------------- Ciclo ---------------------------------- */
+
+	exit() {
+		if (this.exiting) return;
+		this.exiting = true;
+		this.close();
+		this.root.setAttribute("data-exiting", "true");
+	}
+
+	destroy() {
+		for (const k in this.timers) clearTimeout(this.timers[k]);
+		cancelAnimationFrame(this.raf);
+		this.ro.disconnect();
+		this.root.remove();
+	}
+}
+
+/* =========================================================================== */
+/*                                    Store                                    */
+/* =========================================================================== */
+
+const store = {
+	toasts: [],
+	listeners: new Set(),
+	position: "top-right",
+	options: undefined,
+	emit() {
+		for (const fn of this.listeners) fn(this.toasts);
+	},
+	update(fn) {
+		this.toasts = fn(this.toasts);
+		this.emit();
+	},
+};
+
+let idCounter = 0;
+const generateId = () =>
+	`${++idCounter}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+
+const dismissToast = (id) => {
+	const item = store.toasts.find((t) => t.id === id);
+	if (!item || item.exiting) return;
+	store.update((prev) =>
+		prev.map((t) => (t.id === id ? { ...t, exiting: true } : t)),
+	);
+	setTimeout(
+		() => store.update((prev) => prev.filter((t) => t.id !== id)),
+		EXIT_DURATION,
+	);
+};
+
+const resolveAutopilot = (opts, duration) => {
+	if (opts.autopilot === false || !duration || duration <= 0) return {};
+	const cfg = typeof opts.autopilot === "object" ? opts.autopilot : undefined;
+	const clamp = (v) => Math.min(duration, Math.max(0, v));
+	return {
+		autoExpandDelayMs: clamp(cfg?.expand ?? AUTO_EXPAND_DELAY),
+		autoCollapseDelayMs: clamp(cfg?.collapse ?? AUTO_COLLAPSE_DELAY),
+	};
+};
+
+const mergeOptions = (options) => ({
+	...store.options,
+	...options,
+	styles: { ...store.options?.styles, ...options.styles },
+});
+
+const buildItem = (merged, id, fallbackPosition) => {
+	const duration = merged.duration ?? DEFAULT_TOAST_DURATION;
+	return {
+		...merged,
+		...resolveAutopilot(merged, duration),
+		id,
+		instanceId: generateId(),
+		position: merged.position ?? fallbackPosition ?? store.position,
+	};
+};
+
+const createToast = (options) => {
+	const merged = mergeOptions(options);
+	const id = merged.id ?? "sileo-default";
+	const prev = store.toasts.filter((t) => !t.exiting).find((t) => t.id === id);
+	const item = buildItem(merged, id, prev?.position);
+
+	if (prev) {
+		store.update((p) => p.map((t) => (t.id === id ? item : t)));
+	} else {
+		store.update((p) => [...p.filter((t) => t.id !== id), item]);
+	}
+	return { id, duration: merged.duration ?? DEFAULT_TOAST_DURATION };
+};
+
+const updateToast = (id, options) => {
+	const existing = store.toasts.find((t) => t.id === id);
+	if (!existing) return;
+	const item = buildItem(mergeOptions(options), id, existing.position);
+	store.update((prev) => prev.map((t) => (t.id === id ? item : t)));
+};
+
+/* -------------------------------- API publica ----------------------------- */
+
+const emit = (state) => (opts = {}) => {
+	ensureToaster();
+	return createToast({ ...opts, state }).id;
+};
+
+export const sileo = {
+	show: (opts = {}) => {
+		ensureToaster();
+		return createToast({ ...opts, state: opts.type ?? opts.state ?? "success" }).id;
+	},
+	success: emit("success"),
+	error: emit("error"),
+	warning: emit("warning"),
+	info: emit("info"),
+	action: emit("action"),
+	loading: emit("loading"),
+
+	promise(promise, opts) {
+		ensureToaster();
+		const { id } = createToast({
+			...opts.loading,
+			state: "loading",
+			duration: null,
+			position: opts.position,
+		});
+		const p = typeof promise === "function" ? promise() : promise;
+
+		p.then((data) => {
+			if (opts.action) {
+				const a = typeof opts.action === "function" ? opts.action(data) : opts.action;
+				updateToast(id, { ...a, state: "action", id });
+			} else {
+				const s = typeof opts.success === "function" ? opts.success(data) : opts.success;
+				updateToast(id, { ...s, state: "success", id });
+			}
+		}).catch((err) => {
+			const e = typeof opts.error === "function" ? opts.error(err) : opts.error;
+			updateToast(id, { ...e, state: "error", id });
+		});
+
+		return p;
+	},
+
+	update: updateToast,
+	dismiss: dismissToast,
+	clear: (position) =>
+		store.update((prev) => (position ? prev.filter((t) => t.position !== position) : [])),
+};
+
+/* =========================================================================== */
+/*                                   Toaster                                   */
+/* =========================================================================== */
+
+const THEME_FILLS = { light: "#1a1a1a", dark: "#f2f2f2" };
+
+class Toaster {
+	constructor(opts = {}) {
+		this.position = opts.position ?? "top-right";
+		this.offset = opts.offset;
+		this.theme = opts.theme;
+		this.container = opts.container ?? document.body;
+
+		store.position = this.position;
+		store.options = opts.options;
+
+		this.visibleToasts = opts.visibleToasts;
+
+		this.viewports = new Map(); // position -> section
+		this.toasts = new Map(); // id -> SileoToast
+		this.timers = new Map(); // instanceKey -> timeout
+		// position -> estado del stack de tabs
+		this.stacks = new Map(); // { el, hot, focusedId, order, metrics, laying }
+
+		if (this.theme === "system" || this.theme == null) {
+			this.mq = window.matchMedia("(prefers-color-scheme: dark)");
+			this.onMq = () => this._render(store.toasts);
+			this.mq.addEventListener("change", this.onMq);
+		}
+
+		this.listener = (list) => this._render(list);
+		store.listeners.add(this.listener);
+		this._render(store.toasts);
+	}
+
+	get resolvedTheme() {
+		if (this.theme === "light" || this.theme === "dark") return this.theme;
+		return this.mq?.matches ? "dark" : "light";
+	}
+
+	/* -------------------------------- Viewports ------------------------------- */
+
+	_viewport(pos) {
+		let vp = this.viewports.get(pos);
+		if (!vp) {
+			vp = el("section", {
+				"data-sileo-viewport": "",
+				"data-position": pos,
+				"aria-live": "polite",
+				role: "status",
+			});
+			if (this.theme) vp.setAttribute("data-theme", this.resolvedTheme);
+			this._applyOffset(vp, pos);
+			this.container.appendChild(vp);
+			this.viewports.set(pos, vp);
+			this.stacks.set(pos, {
+				el: vp,
+				hot: false,
+				focusedId: undefined,
+				order: [],
+				metrics: null,
+				laying: false,
+			});
+			// El viewport envuelve al stack, asi que hace de zona de hover: pasar
+			// de una lenguesta a otra no lo enfria.
+			vp.addEventListener("pointerenter", () => this._setHot(pos, true));
+			vp.addEventListener("pointerleave", () => this._setHot(pos, false));
+			vp.addEventListener("focusout", (e) => {
+				if (!vp.contains(e.relatedTarget)) this._setHot(pos, false);
+			});
+		} else if (this.theme) {
+			vp.setAttribute("data-theme", this.resolvedTheme);
+		}
+		return vp;
+	}
+
+	_applyOffset(vp, pos) {
+		const offset = this.offset;
+		if (offset == null) return;
+		const o =
+			typeof offset === "object"
+				? offset
+				: { top: offset, right: offset, bottom: offset, left: offset };
+		const px = (v) => (typeof v === "number" ? `${v}px` : v);
+		if (pos.startsWith("top") && o.top) vp.style.top = px(o.top);
+		if (pos.startsWith("bottom") && o.bottom) vp.style.bottom = px(o.bottom);
+		if (pos.endsWith("left") && o.left) vp.style.left = px(o.left);
+		if (pos.endsWith("right") && o.right) vp.style.right = px(o.right);
+	}
+
+	/* --------------------------------- Render --------------------------------- */
+
+	_render(list) {
+		const seen = new Set();
+
+		for (const item of list) {
+			seen.add(item.id);
+			const pos = item.position ?? this.position;
+			const resolved = {
+				...item,
+				position: pos,
+				fill: item.fill ?? (this.theme ? THEME_FILLS[this.resolvedTheme] : undefined),
+			};
+
+			let toast = this.toasts.get(item.id);
+			if (!toast) {
+				toast = new SileoToast(resolved, this);
+				this.toasts.set(item.id, toast);
+				this._viewport(pos).appendChild(toast.root);
+			} else if (toast.instanceId !== item.instanceId) {
+				toast.update(resolved);
+			} else {
+				// el tema puede haber cambiado sin que el toast se rehaga
+				toast.setFill(resolved.fill);
+			}
+			toast.instanceId = item.instanceId;
+
+			if (item.exiting) toast.exit();
+		}
+
+		// Quitar los que ya no estan
+		for (const [id, toast] of this.toasts) {
+			if (!seen.has(id)) {
+				toast.destroy();
+				this.toasts.delete(id);
+			}
+		}
+
+		this._order(list);
+		this._syncTimers(list);
+		this._gcViewports();
+	}
+
+	/* ---------------------------------- Stack --------------------------------- */
+
+	/** Rearma el orden de cada stack: no salientes, del mas nuevo al mas viejo. */
+	_order(list) {
+		for (const st of this.stacks.values()) st.order = [];
+
+		for (const item of list) {
+			if (item.exiting) continue;
+			const st = this.stacks.get(item.position ?? this.position);
+			if (st) st.order.unshift(item.id); // el mas nuevo queda al frente
+		}
+
+		for (const [pos, st] of this.stacks) {
+			// Con el cursor fuera, el foco siempre es el frente: un toast nuevo se
+			// lleva la atencion. Con el cursor dentro no se le roba el foco a la
+			// tab que esta senalando, salvo que desaparezca.
+			if (!st.hot || !st.order.includes(st.focusedId)) st.focusedId = st.order[0];
+			this._applyFocus(pos);
+		}
+	}
+
+	/**
+	 * Medidas del stack. El CSS es la fuente de verdad: las custom properties
+	 * estan registradas con @property, asi que getComputedStyle las devuelve ya
+	 * resueltas a px y aqui basta con parsearlas.
+	 */
+	_metrics(pos) {
+		const st = this.stacks.get(pos);
+		if (st.metrics) return st.metrics;
+		const cs = getComputedStyle(st.el);
+		const num = (name, fallback) => {
+			const v = parseFloat(cs.getPropertyValue(name));
+			return Number.isFinite(v) ? v : fallback;
+		};
+		st.metrics = {
+			h: num("--sileo-height", HEIGHT),
+			overlap: num("--sileo-tab-overlap", TAB_OVERLAP),
+			max: Math.max(
+				1,
+				Math.round(this.visibleToasts ?? num("--sileo-stack-max", STACK_MAX)),
+			),
+		};
+		return st.metrics;
+	}
+
+	/**
+	 * Coloca la fila de tabs, todas a la altura del titulo:
+	 *   x[0]   = 0
+	 *   x[i+1] = x[i] + ancho(i) - solape
+	 * ancho(i) es el de la pill: el titulo completo si la tab esta enfocada, un
+	 * circulo con el icono si no. La fila corre del borde de pantalla hacia
+	 * dentro. Publica --_sh (alto del stack = alto de la enfocada, porque solo
+	 * ella puede abrir su panel). No lee layout del DOM.
+	 */
+	_layout(pos) {
+		const st = this.stacks.get(pos);
+		if (!st || st.laying) return;
+		const m = this._metrics(pos);
+		const align = pillAlign(pos);
+		const row = [];
+		let x = 0;
+		let height = m.h;
+
+		st.order.forEach((id, i) => {
+			const toast = this.toasts.get(id);
+			if (!toast) return;
+			const focused = id === st.focusedId;
+			// la enfocada nunca se oculta, aunque un toast nuevo la empuje al fondo
+			if (i >= m.max && !focused) {
+				toast.setSlot({ i, tx: 0, focused, hidden: true });
+				return;
+			}
+			row.push({ toast, i, focused, x, w: focused ? Math.max(m.h, toast.pillW) : m.h });
+			if (focused) height = Math.max(height, toast.slotHeight(m.h));
+			x += row[row.length - 1].w - m.overlap;
+		});
+
+		// El ancho de la fila solo hace falta para centrarla en las posiciones
+		// *-center; en las demas basta el signo del corrimiento.
+		const last = row[row.length - 1];
+		const width = last ? last.x + last.w : 0;
+
+		for (const slot of row) {
+			const tx =
+				align === "right"
+					? -slot.x
+					: align === "left"
+						? slot.x
+						: slot.x + slot.w / 2 - width / 2;
+			slot.toast.setSlot({ i: slot.i, tx, focused: slot.focused, hidden: false });
+		}
+
+		st.el.style.setProperty("--_sh", `${height}px`);
+	}
+
+	/** Solo la tab enfocada puede expandirse; si el stack esta caliente, se abre. */
+	_applyFocus(pos) {
+		const st = this.stacks.get(pos);
+		if (!st) return;
+		st.laying = true; // silencia los _layout que disparen open/close
+		for (const id of st.order) {
+			const toast = this.toasts.get(id);
+			if (!toast) continue;
+			const focused = id === st.focusedId;
+			toast.setAllowExpand(focused);
+			if (focused && st.hot) toast.open();
+		}
+		st.laying = false;
+		this._layout(pos);
+	}
+
+	_focus(pos, id) {
+		const st = this.stacks.get(pos);
+		if (!st || st.focusedId === id || !st.order.includes(id)) return;
+		st.focusedId = id;
+		this._applyFocus(pos);
+	}
+
+	_setHot(pos, hot) {
+		const st = this.stacks.get(pos);
+		if (!st) return;
+		clearTimeout(st.leaveTimer);
+		if (!hot) {
+			// Red de seguridad: un reflow puede sacar una tab de debajo del cursor
+			// y disparar un leave espurio justo antes del enter de la vecina.
+			st.leaveTimer = setTimeout(() => this._cool(pos), HOVER_LEAVE_MS);
+			return;
+		}
+		if (st.hot) return;
+		st.hot = true;
+		st.el.setAttribute("data-hot", "true");
+		st.metrics = null; // el solape se relaja al entrar el cursor
+		// El autopilot no debe cerrar el panel que el cursor esta senalando.
+		for (const id of st.order) this.toasts.get(id)?.cancelAutopilot();
+		this._clearTimers(); // pausa el auto-dismiss
+		st.focusedId = st.order[0]; // al entrar, el foco arranca en el frente
+		this._applyFocus(pos);
+	}
+
+	_cool(pos) {
+		const st = this.stacks.get(pos);
+		if (!st || !st.hot) return;
+		st.hot = false;
+		st.el.removeAttribute("data-hot");
+		st.metrics = null; // vuelve el solape de reposo
+		st.focusedId = st.order[0];
+		// Reposo: cerrado. _applyFocus solo cierra las no enfocadas, asi que la
+		// del frente se quedaria abierta si fue la ultima senalada.
+		st.laying = true;
+		for (const id of st.order) this.toasts.get(id)?.close();
+		st.laying = false;
+		this._applyFocus(pos);
+		this._syncTimers(store.toasts);
+	}
+
+	get _anyHot() {
+		for (const st of this.stacks.values()) if (st.hot) return true;
+		return false;
+	}
+
+	_gcViewports() {
+		for (const [pos, vp] of this.viewports) {
+			if (!vp.childElementCount) {
+				clearTimeout(this.stacks.get(pos)?.leaveTimer);
+				vp.remove();
+				this.viewports.delete(pos);
+				this.stacks.delete(pos);
+			}
+		}
+	}
+
+	/* --------------------------------- Timers --------------------------------- */
+
+	_syncTimers(list) {
+		const keys = new Set(list.map((t) => `${t.id}:${t.instanceId}`));
+		for (const [key, timer] of this.timers) {
+			if (!keys.has(key)) {
+				clearTimeout(timer);
+				this.timers.delete(key);
+			}
+		}
+		if (this._anyHot) return;
+		for (const item of list) {
+			if (item.exiting || item.duration === null) continue;
+			const key = `${item.id}:${item.instanceId}`;
+			if (this.timers.has(key)) continue;
+			const dur = item.duration ?? DEFAULT_TOAST_DURATION;
+			if (dur <= 0) continue;
+			this.timers.set(key, setTimeout(() => dismissToast(item.id), dur));
+		}
+	}
+
+	_clearTimers() {
+		for (const t of this.timers.values()) clearTimeout(t);
+		this.timers.clear();
+	}
+
+	/* --------------------------------- Config --------------------------------- */
+
+	set(opts = {}) {
+		if (opts.position) {
+			this.position = opts.position;
+			store.position = opts.position;
+		}
+		if ("options" in opts) store.options = opts.options;
+		if ("theme" in opts) this.theme = opts.theme;
+		if ("offset" in opts) this.offset = opts.offset;
+		if ("visibleToasts" in opts) this.visibleToasts = opts.visibleToasts;
+		for (const st of this.stacks.values()) st.metrics = null;
+		this._render(store.toasts);
+	}
+
+	destroy() {
+		store.listeners.delete(this.listener);
+		this.mq?.removeEventListener("change", this.onMq);
+		this._clearTimers();
+		for (const toast of this.toasts.values()) toast.destroy();
+		this.toasts.clear();
+		for (const st of this.stacks.values()) clearTimeout(st.leaveTimer);
+		this.stacks.clear();
+		for (const vp of this.viewports.values()) vp.remove();
+		this.viewports.clear();
+		if (defaultToaster === this) defaultToaster = null;
+	}
+}
+
+let defaultToaster = null;
+
+/** Monta un toaster. Llamalo una vez (o deja que se auto-monte). */
+export function createToaster(opts = {}) {
+	if (defaultToaster) defaultToaster.set(opts);
+	else defaultToaster = new Toaster(opts);
+	return defaultToaster;
+}
+
+/** El toaster montado, o null. Sirve para saber si ya lo creo alguien mas. */
+export function getToaster() {
+	return defaultToaster;
+}
+
+/** Auto-montaje perezoso: sileo.success(...) funciona sin setup. */
+function ensureToaster() {
+	if (!defaultToaster && typeof document !== "undefined") {
+		defaultToaster = new Toaster({});
+	}
+	return defaultToaster;
+}
+
+export { Toaster, dismissToast };
+export default sileo;

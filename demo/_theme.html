@@ -1,0 +1,28 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../src/sileo.css">
+<style>
+  body{margin:0;display:grid;grid-template-columns:1fr 1fr;height:100vh;font-family:system-ui,sans-serif}
+  .claro{background:#f6f6f7}.oscuro{background:#0b0b0c}
+  span{position:absolute;top:8px;font:12px monospace;opacity:.6}
+</style></head><body>
+<div class="claro"><span style="left:8px;color:#000">pagina clara + theme="light"</span></div>
+<div class="oscuro"><span style="left:52%;color:#fff">pagina oscura + theme="dark"</span></div>
+<script type="module">
+import { sileo, createToaster } from "../src/sileo.js";
+const still = document.createElement("style");
+still.textContent = "[data-sileo-viewport],[data-sileo-viewport] *{transition:none !important;animation:none !important}";
+document.head.appendChild(still);
+
+const a = createToaster({ position: "top-left", theme: "light" });
+sileo.success({ id:"a1", title:"Guardado", description:"Toast claro sobre pagina clara.", position:"top-left", duration:null, autopilot:false });
+sileo.info({ id:"a2", title:"Info", description:"Otra.", position:"top-left", duration:null, autopilot:false });
+sileo.warning({ id:"b1", title:"Cuidado", description:"Toast oscuro sobre pagina oscura.", position:"top-right", duration:null, autopilot:false });
+sileo.error({ id:"b2", title:"Error", description:"Otra.", position:"top-right", duration:null, autopilot:false });
+a.set({ theme: "light" });
+await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+// el viewport de la derecha en dark
+document.querySelector('[data-sileo-viewport][data-position="top-right"]').setAttribute("data-theme","dark");
+a._setHot("top-left", true);
+a._setHot("top-right", true);
+</script></body></html>

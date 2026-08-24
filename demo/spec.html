@@ -1,0 +1,177 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="../src/sileo.css">
+<style>body{margin:0;background:#fff}#log{font:12px monospace}</style>
+</head><body><pre id="log"></pre>
+<script type="module">
+import { sileo, createToaster } from "../src/sileo.js";
+
+const log = [];
+let fails = 0;
+const ok = (name, cond, extra = "") => {
+  if (!cond) fails++;
+  log.push(`${cond ? "PASS" : "FAIL"}  ${name}${extra ? "  -> " + extra : ""}`);
+};
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const POS = "top-right";
+const t = createToaster({ position: POS, theme: "system" });
+const st = () => t.stacks.get(POS);
+const node = (id) => t.toasts.get(id).root;
+const txOf = (id) => parseFloat(node(id).style.getPropertyValue("--_tx"));
+const rwOf = (id) => getComputedStyle(node(id)).getPropertyValue("--_rw").trim();
+const pwOf = (id) => getComputedStyle(node(id)).getPropertyValue("--_pw").trim();
+const topOf = (id) => node(id).querySelector("[data-sileo-pill]").offsetTop;
+const head = (id) => node(id).querySelector("[data-sileo-header]");
+const shOf = () => getComputedStyle(st().el).getPropertyValue("--_sh").trim();
+const fire = (el, type) => el.dispatchEvent(new PointerEvent(type, { bubbles: false }));
+const hover = (id) => fire(head(id), "pointerenter");
+
+const mk = (id, title) =>
+  sileo.info({ id, title, description: `Mensaje de ${title}.`, autopilot: false });
+
+// ---------------------------------------------------------------- 1 solo toast
+mk("a", "Uno");
+await sleep(50);
+ok("1 toast: enfocado", node("a").dataset.focused === "true");
+ok("1 toast: en el borde", txOf("a") === 0, String(txOf("a")));
+ok("1 toast: ancho = su pill", rwOf("a") === pwOf("a"), `${rwOf("a")} vs ${pwOf("a")}`);
+ok("1 toast: sin ocultar", !node("a").dataset.hidden);
+
+// -------------------------------------------------------------- orden y offsets
+mk("b", "Dos");
+mk("c", "Tres");
+await sleep(50);
+ok("orden = nuevo primero", JSON.stringify(st().order) === '["c","b","a"]', JSON.stringify(st().order));
+ok("foco sigue al nuevo", st().focusedId === "c", st().focusedId);
+// La enfocada (el frente) ocupa el borde y muestra su titulo; las otras son
+// circulos de 40 que se montan 12 sobre la vecina, hacia dentro de la pantalla.
+const overlap = t._metrics(POS).overlap;
+const step = parseFloat(rwOf("c")) - overlap;
+ok("frente pegado al borde", txOf("c") === 0, String(txOf("c")));
+ok("la 2a arranca tras la enfocada", txOf("b") === -Math.round(step), `${txOf("b")} vs ${-step}`);
+ok("paso entre circulos = 40 - solape", txOf("a") - txOf("b") === -(40 - overlap),
+   `${txOf("a") - txOf("b")} con solape ${overlap}`);
+ok("solo la enfocada muestra titulo", rwOf("b") === "40px" && rwOf("a") === "40px",
+   `${rwOf("b")} ${rwOf("a")}`);
+ok("toda la fila a la misma altura", topOf("a") === topOf("b") && topOf("b") === topOf("c"),
+   [topOf("c"), topOf("b"), topOf("a")].join());
+
+// ------------------------------------------------- cursor entra: frente se abre
+fire(st().el, "pointerenter");
+await sleep(50);
+ok("hot", st().hot === true);
+ok("hot: el solape se relaja", t._metrics(POS).overlap === 12 && overlap > 12,
+   `reposo ${overlap} -> hover ${t._metrics(POS).overlap}`);
+ok("hot: frente expandido", node("c").dataset.expanded === "true");
+ok("hot: timers pausados", t.timers.size === 0, String(t.timers.size));
+ok("hot: la fila no se mueve", topOf("a") === topOf("c"), [topOf("c"), topOf("a")].join());
+ok("hot: el stack crece de alto", parseFloat(shOf()) > 40, shOf());
+
+// ------------------------------------------- el cursor pasa a otra tab: enfoque
+hover("a");
+await sleep(50);
+ok("foco -> tab senalada", st().focusedId === "a", st().focusedId);
+ok("la nueva enfocada abre", node("a").dataset.expanded === "true");
+ok("la anterior colapsa", node("c").dataset.expanded === "false");
+ok("z de la enfocada al frente", getComputedStyle(node("a")).zIndex === "60");
+ok("la enfocada se ensancha", rwOf("a") === pwOf("a"), `${rwOf("a")} vs ${pwOf("a")}`);
+ok("la anterior vuelve a circulo", rwOf("c") === "40px", rwOf("c"));
+
+// ------------------------------------------------- cursor sale: vuelve al frente
+fire(st().el, "pointerleave");
+await sleep(300);
+ok("cold", st().hot === false);
+ok("foco vuelve al frente", st().focusedId === "c", st().focusedId);
+ok("todo colapsado", node("a").dataset.expanded !== "true" && node("c").dataset.expanded !== "true");
+ok("timers reanudados", t.timers.size === st().order.length, String(t.timers.size));
+
+// ------------------------------------------------------ tope de tabs visibles
+mk("d", "Cuatro");
+mk("e", "Cinco");
+await sleep(50);
+const vis = st().order.filter((id) => !node(id).dataset.hidden);
+ok("solo 3 visibles", vis.length === 3, JSON.stringify(vis));
+ok("las ocultas sin filtro", getComputedStyle(node("a").querySelector("[data-sileo-canvas]")).filter === "none");
+
+// --------------------------------------------------- descartar la tab enfocada
+sileo.dismiss("e");
+await sleep(1200);
+ok("tras descartar, foco al nuevo frente", st().focusedId === "d", st().focusedId);
+ok("el descartado se fue del DOM", !t.toasts.has("e"));
+ok("stack recompactado", txOf("d") === 0, String(txOf("d")));
+
+// ------------------------------------------------------------------ auto-dismiss
+sileo.info({ id: "f", title: "Temporal", description: "Se va sola.", duration: 400 });
+await sleep(60);
+ok("con duration se agenda timer", [...t.timers.keys()].some((k) => k.startsWith("f:")),
+   JSON.stringify([...t.timers.keys()]));
+await sleep(1400);
+ok("auto-dismiss ejecutado", !t.toasts.has("f"));
+
+
+// ------------------------------------------------------ promise dentro del stack
+sileo.clear();
+await sleep(900);
+mk("bg", "Fondo");
+await sleep(50);
+sileo.promise(() => sleep(300).then(() => "listo"), {
+  loading: { id: "pr", title: "Subiendo", description: "Enviando archivo..." },
+  success: () => ({ title: "Subido", description: "Ya esta disponible en tu carpeta." }),
+  error: () => ({ title: "Fallo" }),
+});
+await sleep(80);
+ok("promise: loading al frente", st().focusedId === "pr", st().focusedId);
+ok("promise: loading no se expande", node("pr").dataset.expanded !== "true");
+ok("promise: el de atras se corre", txOf("bg") < 0, String(txOf("bg")));
+ok("promise: sombra en la cadena de filtros",
+   getComputedStyle(node("pr").querySelector("[data-sileo-canvas]")).filter.includes("drop-shadow"),
+   getComputedStyle(node("pr").querySelector("[data-sileo-canvas]")).filter);
+await sleep(1200);
+ok("promise: paso a success", node("pr").dataset.state === "success", node("pr").dataset.state);
+ok("promise: titulo nuevo", node("pr").textContent.includes("Subido"));
+ok("promise: sigue enfocado y en el borde", st().focusedId === "pr" && txOf("pr") === 0,
+   String(txOf("pr")));
+
+
+// ------------------------------------------------------------- swipe (arrastre)
+sileo.clear();
+await sleep(900);
+mk("sw", "Arrastrable");
+await sleep(80);
+const grip = head("sw");
+const drag = (type, y) =>
+  grip.dispatchEvent(new PointerEvent(type, { bubbles: false, clientY: y, pointerId: 1 }));
+drag("pointerdown", 100);
+drag("pointermove", 150);
+ok("swipe: marca data-swiping", node("sw").dataset.swiping === "true");
+ok("swipe: desplaza con tope", node("sw").style.getPropertyValue("--_sy") === "20px",
+   node("sw").style.getPropertyValue("--_sy"));
+drag("pointerup", 150);
+await sleep(1200);
+ok("swipe: descarta al soltar", !t.toasts.has("sw"));
+
+
+// -------------------------------------- el autopilot cede ante el cursor
+sileo.clear();
+await sleep(900);
+sileo.info({ id: "ap", title: "Autopilot", description: "Se abre sola y luego cierra.", duration: null });
+await sleep(400);
+ok("autopilot: abre sola", node("ap").dataset.expanded === "true");
+await sleep(4300);
+ok("autopilot: y cierra sola", node("ap").dataset.expanded !== "true");
+
+sileo.info({ id: "ap2", title: "Autopilot dos", description: "El cursor manda.", duration: null });
+await sleep(400);
+fire(st().el, "pointerenter");
+hover("ap2");
+ok("hover: abierta", node("ap2").dataset.expanded === "true");
+await sleep(4300); // pasado el momento en que el autopilot cerraria
+ok("hover: el autopilot no cierra bajo el cursor", node("ap2").dataset.expanded === "true",
+   node("ap2").dataset.expanded);
+fire(st().el, "pointerleave");
+await sleep(400);
+ok("al salir el cursor, cerrada", node("ap2").dataset.expanded !== "true");
+
+document.getElementById("log").textContent =
+  log.join("\n") + `\n\n${fails === 0 ? "TODO OK" : fails + " FALLOS"}`;
+</script></body></html>
