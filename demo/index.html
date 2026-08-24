@@ -3,7 +3,11 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Sileo · vanilla JS</title>
+		<title>Sileo · demo</title>
+		<meta
+			name="description"
+			content="Sileo — toast con morphing gooey y spring physics. Core vanilla JS, cero dependencias, toda la animación en CSS."
+		/>
 		<link rel="stylesheet" href="../src/sileo.css" />
 		<style>
 			/* Paleta en tokens. Por defecto sigue al sistema; [data-theme] en <html>
@@ -12,16 +16,18 @@
 			:root {
 				color-scheme: light;
 				--bg: #fbfbfc;
-				--fg: #1a1a1f;
-				--faint: #6b6b73;
-				--muted: #8a8a92;
+				--fg: #16161b;
+				--faint: #61616a;
+				--muted: #8a8a93;
 				--surface: #ffffff;
-				--surface-2: #f1f1f4;
-				--border: #e3e3e8;
-				--border-strong: #cfcfd6;
-				--code-bg: #f6f6f8;
+				--surface-2: #f2f2f5;
+				--border: #e4e4e9;
+				--border-strong: #d0d0d8;
+				--code-bg: #f7f7f9;
 				--code-fg: #45454d;
 				--acento: #1d4ed8;
+				--acento-fg: #ffffff;
+				--sombra-card: 0 1px 2px rgb(16 16 22 / 0.04), 0 8px 24px rgb(16 16 22 / 0.05);
 			}
 
 			@media (prefers-color-scheme: dark) {
@@ -29,15 +35,17 @@
 					color-scheme: dark;
 					--bg: #0b0b0c;
 					--fg: #ededed;
-					--faint: #8b8b8f;
-					--muted: #6c6c70;
-					--surface: #16161a;
-					--surface-2: #1e1e23;
-					--border: #26262a;
-					--border-strong: #34343a;
+					--faint: #9a9aa1;
+					--muted: #6c6c72;
+					--surface: #121216;
+					--surface-2: #1a1a1f;
+					--border: #24242a;
+					--border-strong: #34343c;
 					--code-bg: #0e0e11;
 					--code-fg: #c9c9cf;
 					--acento: #6aa8ff;
+					--acento-fg: #071018;
+					--sombra-card: 0 1px 2px rgb(0 0 0 / 0.4);
 				}
 			}
 
@@ -45,154 +53,312 @@
 				color-scheme: dark;
 				--bg: #0b0b0c;
 				--fg: #ededed;
-				--faint: #8b8b8f;
-				--muted: #6c6c70;
-				--surface: #16161a;
-				--surface-2: #1e1e23;
-				--border: #26262a;
-				--border-strong: #34343a;
+				--faint: #9a9aa1;
+				--muted: #6c6c72;
+				--surface: #121216;
+				--surface-2: #1a1a1f;
+				--border: #24242a;
+				--border-strong: #34343c;
 				--code-bg: #0e0e11;
 				--code-fg: #c9c9cf;
 				--acento: #6aa8ff;
+				--acento-fg: #071018;
+				--sombra-card: 0 1px 2px rgb(0 0 0 / 0.4);
 			}
 
 			* { box-sizing: border-box; }
+
 			body {
 				margin: 0;
 				min-height: 100vh;
-				display: grid;
-				place-items: center;
 				background: var(--bg);
 				color: var(--fg);
 				font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+				font-size: 15px;
+				line-height: 1.6;
 				transition: background 200ms ease, color 200ms ease;
 			}
-			main { width: min(560px, 92vw); padding: 2rem 0; }
-			h1 { font-size: 1.5rem; margin: 0 0 0.25rem; letter-spacing: -0.02em; }
-			p.lead { margin: 0 0 2rem; color: var(--faint); font-size: 0.9rem; line-height: 1.5; }
-			h2 {
-				font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em;
-				color: var(--muted); margin: 1.75rem 0 0.6rem;
-			}
+
+			main { width: min(660px, 92vw); margin: 0 auto; padding: 3.5rem 0 5rem; }
+
 			a { color: var(--acento); }
-			.row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+			:is(a, .btn, .tablist button, select, .copiar):focus-visible {
+				outline: 2px solid var(--acento);
+				outline-offset: 2px;
+			}
+
+			/* ---------------------------------- Hero -------------------------------- */
+
+			.hero { margin-bottom: 2.5rem; }
+			.titulo-linea { display: flex; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+			h1 { font-size: 2rem; letter-spacing: -0.03em; margin: 0; }
+			.version {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.7rem; color: var(--muted);
+				border: 1px solid var(--border); border-radius: 9999px;
+				padding: 0.1rem 0.5rem;
+			}
+			.tagline {
+				margin: 0 0 1.25rem; color: var(--faint); font-size: 1rem;
+				max-width: 54ch;
+			}
+			.acciones { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
+			.btn {
+				appearance: none; cursor: pointer; font: inherit; font-size: 0.85rem;
+				display: inline-flex; align-items: center; gap: 0.4rem;
+				padding: 0.5rem 0.95rem; border-radius: 9999px;
+				border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+				text-decoration: none;
+				transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
+			}
+			.btn:hover { background: var(--surface-2); border-color: var(--border-strong); }
+			.btn:active { transform: translateY(1px); }
+			.btn.principal {
+				background: var(--acento); border-color: var(--acento); color: var(--acento-fg);
+				font-weight: 500;
+			}
+			.btn.principal:hover { background: var(--acento); filter: brightness(1.08); }
+
+			.instalar {
+				display: flex; align-items: center; gap: 0.6rem;
+				margin-top: 1.25rem; padding: 0.55rem 0.6rem 0.55rem 0.9rem;
+				border: 1px solid var(--border); border-radius: 0.7rem;
+				background: var(--code-bg);
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.82rem; color: var(--code-fg);
+				width: fit-content; max-width: 100%;
+			}
+			.instalar .prompt { color: var(--muted); user-select: none; }
+			.copiar {
+				appearance: none; cursor: pointer; font: inherit; font-size: 0.7rem;
+				padding: 0.2rem 0.55rem; border-radius: 0.4rem;
+				border: 1px solid var(--border); background: var(--surface); color: var(--faint);
+				transition: color 140ms ease, border-color 140ms ease;
+			}
+			.copiar:hover { color: var(--fg); border-color: var(--border-strong); }
+
+			/* --------------------------------- Tarjetas ------------------------------ */
+
+			.card {
+				border: 1px solid var(--border); border-radius: 1rem;
+				background: var(--surface); box-shadow: var(--sombra-card);
+				padding: 1.2rem 1.3rem 1.3rem;
+				margin-bottom: 1rem;
+			}
+			.card h2 { font-size: 0.95rem; margin: 0 0 0.15rem; letter-spacing: -0.01em; }
+			.card p.pista {
+				margin: 0 0 1rem; color: var(--muted); font-size: 0.82rem; line-height: 1.5;
+			}
+			.row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+
 			/* Scopeado a .row: un `button {}` suelto tambien alcanzaria la raiz del
 			   toast, que es un <button>. */
 			.row button {
-				appearance: none; cursor: pointer; font: inherit; font-size: 0.8rem;
-				padding: 0.45rem 0.8rem; border-radius: 9999px;
-				border: 1px solid var(--border); background: var(--surface); color: var(--fg);
-				transition: background 140ms ease, border-color 140ms ease;
+				appearance: none; cursor: pointer; font: inherit; font-size: 0.82rem;
+				display: inline-flex; align-items: center; gap: 0.45rem;
+				padding: 0.42rem 0.85rem; border-radius: 9999px;
+				border: 1px solid var(--border); background: var(--surface-2); color: var(--fg);
+				transition: background 140ms ease, border-color 140ms ease, transform 140ms ease;
 			}
-			.row button:hover { background: var(--surface-2); border-color: var(--border-strong); }
+			.row button:hover { border-color: var(--border-strong); }
+			.row button:active { transform: translateY(1px); }
+
+			/* El punto adelanta el color del estado que dispara el boton */
+			.punto {
+				width: 8px; height: 8px; border-radius: 9999px; flex-shrink: 0;
+				background: var(--tono, var(--muted));
+			}
+			[data-demo="success"] { --tono: var(--sileo-state-success); }
+			[data-demo="error"]   { --tono: var(--sileo-state-error); }
+			[data-demo="warning"] { --tono: var(--sileo-state-warning); }
+			[data-demo="info"]    { --tono: var(--sileo-state-info); }
+			[data-demo="action"]  { --tono: var(--sileo-state-action); }
+
 			select {
-				font: inherit; font-size: 0.8rem; padding: 0.45rem 0.6rem;
+				font: inherit; font-size: 0.82rem; padding: 0.42rem 0.7rem;
 				border-radius: 9999px; border: 1px solid var(--border);
-				background: var(--surface); color: var(--fg);
-			}
-			code {
-				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 0.8rem; color: var(--faint);
+				background: var(--surface-2); color: var(--fg); cursor: pointer;
 			}
 
-			/* Pestañas de código */
-			.tablist { display: flex; flex-wrap: wrap; gap: 0.25rem; margin-bottom: 0.5rem; }
+			.separador { display: flex; align-items: center; gap: 0.6rem; margin: 1.1rem 0 0.8rem; }
+			.separador::before, .separador::after {
+				content: ""; height: 1px; background: var(--border); flex: 1;
+			}
+			.separador span {
+				font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em;
+				color: var(--muted);
+			}
+
+			code {
+				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+				font-size: 0.84em; color: var(--faint);
+			}
+
+			/* ---------------------------- Pestañas de código ------------------------- */
+
+			.tablist {
+				display: flex; flex-wrap: wrap; gap: 0.2rem;
+				margin-bottom: 0.7rem; padding-bottom: 0.55rem;
+				border-bottom: 1px solid var(--border);
+			}
 			.tablist button {
 				appearance: none; cursor: pointer; font: inherit; font-size: 0.78rem;
-				padding: 0.35rem 0.7rem; border-radius: 9999px;
-				border: 1px solid transparent; background: transparent; color: var(--faint);
+				padding: 0.33rem 0.7rem; border-radius: 9999px;
+				border: 1px solid transparent; background: transparent; color: var(--muted);
 				transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
 			}
-			.tablist button:hover { color: var(--fg); background: var(--surface); }
+			.tablist button:hover { color: var(--fg); background: var(--surface-2); }
 			.tablist button[aria-selected="true"] {
 				color: var(--fg); background: var(--surface-2); border-color: var(--border-strong);
+				font-weight: 500;
 			}
 			pre[role="tabpanel"] {
 				margin: 0; padding: 0.9rem 1rem;
-				border: 1px solid var(--border); border-radius: 0.75rem; background: var(--code-bg);
+				border: 1px solid var(--border); border-radius: 0.7rem; background: var(--code-bg);
 				overflow-x: auto; color: var(--code-fg);
 				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 				font-size: 0.78rem; line-height: 1.55;
 			}
 			pre[role="tabpanel"][hidden] { display: none; }
+
+			/* --------------------------------- Footer -------------------------------- */
+
+			footer {
+				margin-top: 2.5rem; padding-top: 1.4rem; border-top: 1px solid var(--border);
+				display: flex; flex-wrap: wrap; gap: 0.4rem 1.2rem; align-items: center;
+				color: var(--muted); font-size: 0.8rem;
+			}
+			footer a { text-decoration: none; }
+			footer a:hover { text-decoration: underline; }
+
+			@media (max-width: 560px) {
+				main { padding-top: 2.25rem; }
+				h1 { font-size: 1.6rem; }
+			}
 		</style>
 	</head>
+
 	<body>
 		<main>
-			<h1>Sileo</h1>
-			<p class="lead">
-				Toast con morphing gooey y spring physics. Core vanilla, cero dependencias,
-				toda la animación en CSS. Varios toasts forman una fila de pestañas
-				solapadas a la altura del título: pasa el cursor por encima y la del frente
-				abre su mensaje; muévelo a otro círculo y el enfoque salta a esa tab, que se
-				ensancha para mostrar su título. Arrastra un toast para descartarlo.
-			</p>
+			<header class="hero">
+				<div class="titulo-linea">
+					<h1>Sileo</h1>
+					<span class="version">v0.1.0</span>
+				</div>
+				<p class="tagline">
+					Toast con morphing gooey y spring physics. Core vanilla, cero dependencias
+					y toda la animación en CSS. Varios toasts forman una fila de pestañas
+					solapadas: pasa el cursor por encima, muévete entre ellas, arrastra para
+					descartar.
+				</p>
 
-			<p class="lead" style="margin-top:-1.4rem">
-				<a href="../docs/index.html">Documentación →</a>
-				&nbsp;·&nbsp; <a href="https://github.com/dinnger/sileojs">GitHub ↗</a>
-				&nbsp;·&nbsp; <a href="https://www.npmjs.com/package/sileojs">npm ↗</a>
-			</p>
+				<div class="acciones">
+					<a class="btn principal" href="../docs/index.html">
+						Documentación <span aria-hidden="true">→</span>
+					</a>
+					<a class="btn" href="https://github.com/dinnger/sileojs">
+						GitHub <span aria-hidden="true">↗</span>
+					</a>
+					<a class="btn" href="https://www.npmjs.com/package/sileojs">
+						npm <span aria-hidden="true">↗</span>
+					</a>
+				</div>
 
-			<h2>Estados</h2>
-			<div class="row">
-				<button data-demo="success">success</button>
-				<button data-demo="error">error</button>
-				<button data-demo="warning">warning</button>
-				<button data-demo="info">info</button>
-				<button data-demo="action">action</button>
-			</div>
+				<div class="instalar">
+					<span class="prompt" aria-hidden="true">$</span>
+					<span id="cmd-instalar">npm i sileojs</span>
+					<button type="button" class="copiar" data-copiar="cmd-instalar">copiar</button>
+				</div>
+			</header>
 
-			<h2>Composición</h2>
-			<div class="row">
-				<button data-demo="button">con botón</button>
-				<button data-demo="icon">icono propio</button>
-				<button data-demo="plain">solo título</button>
-				<button data-demo="long">descripción larga</button>
-				<button data-demo="roundness">roundness 24</button>
-			</div>
+			<section class="card">
+				<h2>Estados</h2>
+				<p class="pista">
+					Cada estado trae su color y su icono. Si no pasas título, se usa el propio
+					estado.
+				</p>
+				<div class="row">
+					<button data-demo="success"><span class="punto"></span>success</button>
+					<button data-demo="error"><span class="punto"></span>error</button>
+					<button data-demo="warning"><span class="punto"></span>warning</button>
+					<button data-demo="info"><span class="punto"></span>info</button>
+					<button data-demo="action"><span class="punto"></span>action</button>
+				</div>
+			</section>
 
-			<h2>Promesa</h2>
-			<div class="row">
-				<button data-demo="promise">resuelve</button>
-				<button data-demo="promise-fail">falla</button>
-				<button data-demo="promise-action">→ action</button>
-			</div>
+			<section class="card">
+				<h2>Composición</h2>
+				<p class="pista">
+					El panel acepta texto, nodos del DOM o <code>{ html }</code>, y un botón de
+					acción. Sin descripción, el toast no se despliega.
+				</p>
+				<div class="row">
+					<button data-demo="button">con botón</button>
+					<button data-demo="icon">icono propio</button>
+					<button data-demo="plain">solo título</button>
+					<button data-demo="long">descripción larga</button>
+					<button data-demo="roundness">roundness 24</button>
+				</div>
 
-			<h2>Control</h2>
-			<div class="row">
-				<select id="position">
-					<option>top-left</option>
-					<option>top-center</option>
-					<option selected>top-right</option>
-					<option>bottom-left</option>
-					<option>bottom-center</option>
-					<option>bottom-right</option>
-				</select>
-				<select id="theme" aria-label="Tema de la página y de los toasts">
-					<option value="system" selected>tema: sistema</option>
-					<option value="light">tema: claro</option>
-					<option value="dark">tema: oscuro</option>
-				</select>
-				<button data-demo="stack">apilar 3</button>
-				<button data-demo="stack5">apilar 5</button>
-				<button data-demo="clear">clear()</button>
-			</div>
+				<div class="separador"><span>Promesa</span></div>
+				<p class="pista">
+					<code>sileo.promise()</code> muestra <code>loading</code> y cambia al
+					resolverse. Mientras espera no se despliega ni se auto-cierra.
+				</p>
+				<div class="row">
+					<button data-demo="promise">resuelve</button>
+					<button data-demo="promise-fail">falla</button>
+					<button data-demo="promise-action">→ action</button>
+				</div>
+			</section>
 
-			<h2>Uso</h2>
-			<p class="lead">
-				El core es vanilla: en cualquier framework se monta el toaster una vez y
-				se llama a <code>sileo.*()</code> desde donde sea.
-			</p>
+			<section class="card">
+				<h2>La fila de tabs</h2>
+				<p class="pista">
+					Solo la tab enfocada muestra su mensaje; las demás quedan como círculos con
+					su icono. Se ven tres: la cuarta y la quinta esperan detrás.
+				</p>
+				<div class="row">
+					<button data-demo="stack">apilar 3</button>
+					<button data-demo="stack5">apilar 5</button>
+					<button data-demo="clear">clear()</button>
+				</div>
 
-			<div class="tablist" role="tablist" aria-label="Frameworks">
-				<button type="button" role="tab" id="tab-vanilla" aria-controls="code-vanilla" aria-selected="true">Vanilla</button>
-				<button type="button" role="tab" id="tab-vue-global" aria-controls="code-vue-global" aria-selected="false" tabindex="-1">Vue 3 global</button>
-				<button type="button" role="tab" id="tab-vue" aria-controls="code-vue" aria-selected="false" tabindex="-1">Vue 3 componente</button>
-				<button type="button" role="tab" id="tab-react" aria-controls="code-react" aria-selected="false" tabindex="-1">React</button>
-				<button type="button" role="tab" id="tab-svelte" aria-controls="code-svelte" aria-selected="false" tabindex="-1">Svelte</button>
-				<button type="button" role="tab" id="tab-angular" aria-controls="code-angular" aria-selected="false" tabindex="-1">Angular</button>
-			</div>
+				<div class="separador"><span>Ajustes</span></div>
+				<div class="row">
+					<select id="position" aria-label="Posición de los toasts">
+						<option>top-left</option>
+						<option>top-center</option>
+						<option selected>top-right</option>
+						<option>bottom-left</option>
+						<option>bottom-center</option>
+						<option>bottom-right</option>
+					</select>
+					<select id="theme" aria-label="Tema de la página y de los toasts">
+						<option value="system" selected>tema: sistema</option>
+						<option value="light">tema: claro</option>
+						<option value="dark">tema: oscuro</option>
+					</select>
+				</div>
+			</section>
+
+			<section class="card">
+				<h2>Uso</h2>
+				<p class="pista">
+					El core es vanilla: en cualquier framework se monta el toaster una vez y se
+					llama a <code>sileo.*()</code> desde donde sea.
+				</p>
+
+				<div class="tablist" role="tablist" aria-label="Frameworks">
+					<button type="button" role="tab" id="tab-vanilla" aria-controls="code-vanilla" aria-selected="true">Vanilla</button>
+					<button type="button" role="tab" id="tab-vue-global" aria-controls="code-vue-global" aria-selected="false" tabindex="-1">Vue 3 global</button>
+					<button type="button" role="tab" id="tab-vue" aria-controls="code-vue" aria-selected="false" tabindex="-1">Vue 3 componente</button>
+					<button type="button" role="tab" id="tab-react" aria-controls="code-react" aria-selected="false" tabindex="-1">React</button>
+					<button type="button" role="tab" id="tab-svelte" aria-controls="code-svelte" aria-selected="false" tabindex="-1">Svelte</button>
+					<button type="button" role="tab" id="tab-angular" aria-controls="code-angular" aria-selected="false" tabindex="-1">Angular</button>
+				</div>
 
 <pre role="tabpanel" id="code-vanilla" aria-labelledby="tab-vanilla" tabindex="0"><code>import { sileo, createToaster } from "sileojs";
 import "sileojs/styles.css";
@@ -297,12 +463,26 @@ export class AppComponent implements OnInit, OnDestroy {
     sileo.success({ title: "Guardado" });
   }
 }</code></pre>
+
+				<p class="pista" style="margin: 1rem 0 0">
+					La API completa, las variables CSS y el resto de opciones están en la
+					<a href="../docs/index.html">documentación</a>.
+				</p>
+			</section>
+
+			<footer>
+				<span>MIT</span>
+				<a href="../docs/index.html">Documentación</a>
+				<a href="https://github.com/dinnger/sileojs">GitHub</a>
+				<a href="https://www.npmjs.com/package/sileojs">npm</a>
+				<a href="https://sileo.aaryan.design/">Diseño original</a>
+			</footer>
 		</main>
 
 		<script type="module">
 			import { sileo, createToaster } from "../src/sileo.js";
 
-			let toaster = createToaster({ position: "top-right", theme: "system" });
+			const toaster = createToaster({ position: "top-right", theme: "system" });
 
 			const heart =
 				'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>';
@@ -348,7 +528,7 @@ export class AppComponent implements OnInit, OnDestroy {
 						id: "btn",
 						title: "Archivo subido",
 						description: "reporte-q3.pdf · 2.4 MB",
-						button: { title: "Ver archivo", onClick: () => alert("ver") },
+						button: { title: "Ver archivo", onClick: () => sileo.info({ title: "Abriendo" }) },
 					}),
 				icon: () =>
 					sileo.info({
@@ -431,8 +611,11 @@ export class AppComponent implements OnInit, OnDestroy {
 				btn.addEventListener("click", () => demos[btn.dataset.demo]?.());
 			}
 
+			/* --------------------------------- Ajustes -------------------------------- */
+
 			const position = document.getElementById("position");
 			const theme = document.getElementById("theme");
+
 			/* El mismo valor sirve para los dos: "light" significa página clara, y el
 			   toaster responde poniendo la cápsula oscura (y al revés). */
 			const aplicarTema = (valor) => {
@@ -456,7 +639,23 @@ export class AppComponent implements OnInit, OnDestroy {
 				sileo.clear();
 			});
 
+			/* --------------------------------- Copiar --------------------------------- */
+
+			for (const btn of document.querySelectorAll("[data-copiar]")) {
+				btn.addEventListener("click", async () => {
+					const texto = document.getElementById(btn.dataset.copiar).textContent;
+					try {
+						await navigator.clipboard.writeText(texto);
+						btn.textContent = "copiado";
+					} catch {
+						btn.textContent = "no se pudo";
+					}
+					setTimeout(() => (btn.textContent = "copiar"), 1400);
+				});
+			}
+
 			/* ------------------------------ Pestañas de código ------------------------ */
+
 			const tablist = document.querySelector('[role="tablist"]');
 			const tabs = [...tablist.querySelectorAll('[role="tab"]')];
 
