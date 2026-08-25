@@ -1,38 +1,42 @@
 # Sileo (vanilla JS)
 
+**English** · [Español](README.es.md)
+
 [![npm](https://img.shields.io/npm/v/sileojs?color=%230b7285&label=npm)](https://www.npmjs.com/package/sileojs)
-[![licencia](https://img.shields.io/npm/l/sileojs?color=%23555)](LICENSE)
-[![sin dependencias](https://img.shields.io/badge/dependencias-0-brightgreen)](https://www.npmjs.com/package/sileojs?activeTab=dependencies)
+[![license](https://img.shields.io/npm/l/sileojs?color=%23555)](LICENSE)
+[![zero dependencies](https://img.shields.io/badge/dependencies-0-brightgreen)](https://www.npmjs.com/package/sileojs?activeTab=dependencies)
 
 ![til](./intro.gif)
 
-**[Documentación](https://dinnger.github.io/sileojs/docs/)** · **[Docs in English](https://dinnger.github.io/sileojs/docs/en.html)** · **[Demo](https://dinnger.github.io/sileojs/demo/)** · **[npm](https://www.npmjs.com/package/sileojs)** · **[GitHub](https://github.com/dinnger/sileojs)**
+**[Docs](https://dinnger.github.io/sileojs/docs/en.html)** · **[Documentación en español](https://dinnger.github.io/sileojs/docs/)** · **[Demo](https://dinnger.github.io/sileojs/demo/)** · **[npm](https://www.npmjs.com/package/sileojs)** · **[GitHub](https://github.com/dinnger/sileojs)**
 
-Réplica de [sileo.aaryan.design](https://sileo.aaryan.design/) — toast con morphing
-gooey y spring physics — reescrita como **core vanilla, cero dependencias**, que
-funciona con cualquier framework JS. Incluye adaptador Vue 3.
+A rewrite of [sileo.aaryan.design](https://sileo.aaryan.design/) — toasts with
+gooey morphing and spring physics — rebuilt as a **vanilla core with zero
+dependencies** that works with any JS framework. Ships a Vue 3 adapter.
 
-El original es React + [`motion`](https://motion.dev). Aquí **toda la animación vive
-en CSS**: el spring es una `linear()` easing nativa y la geometría se resuelve con
-`calc()` / `max()` sobre custom properties. JS solo hace estado, DOM, medir dos cosas
-(ancho del pill y alto del panel), colocar las tabs del stack y llevar los timers.
+The original is React + [`motion`](https://motion.dev). Here **all the animation
+lives in CSS**: the spring is a native `linear()` easing and the geometry is
+resolved with `calc()` / `max()` over custom properties. JS only keeps state,
+builds the DOM, measures two things (pill width and panel height), places the
+tabs in the row and runs the timers.
 
 ```
-src/sileo.css   motor de animación (spring, morph, gooey, temas)
-src/sileo.js    core vanilla — store + renderer + API
-src/vue.js      adaptador Vue 3 (componente, plugin, composable)
-docs/index.html documentación completa (panel lateral, ejemplos vivos)
-docs/en.html    la misma, en inglés — la página elige idioma según el navegador
-docs/docs.css   hoja y guion compartidos por los dos idiomas
+src/sileo.css   animation engine (spring, morph, gooey, themes)
+src/sileo.js    vanilla core — store + renderer + API
+src/vue.js      Vue 3 adapter (component, plugin, composable)
+docs/en.html    full documentation (sidebar, live examples)
+docs/index.html the same, in Spanish — the page picks the language from the browser
+docs/docs.css   stylesheet and script shared by both languages
 docs/docs.js
-demo/index.html playground sin build
+demo/index.html playground, no build
+README.es.md    this same file, in Spanish
 ```
 
-**[Documentación completa →](https://dinnger.github.io/sileojs/docs/)** — instalación, uso en cada
-framework, referencia de la API, variables CSS y accesibilidad, con ejemplos que
-se pueden probar en la página.
+**[Full documentation →](https://dinnger.github.io/sileojs/docs/en.html)** —
+install, usage per framework, API reference, CSS variables and accessibility,
+with examples you can fire right on the page.
 
-## Instalación
+## Install
 
 ```bash
 npm i sileojs
@@ -44,11 +48,11 @@ import "sileojs/styles.css";
 
 createToaster({ position: "top-right", theme: "system" });
 
-sileo.success({ title: "Guardado", description: "Tus cambios se sincronizaron." });
+sileo.success({ title: "Saved", description: "Your changes were synced." });
 ```
 
-`createToaster()` es opcional: el primer `sileo.*()` monta un toaster con los
-valores por defecto.
+`createToaster()` is optional: the first `sileo.*()` mounts a toaster with the
+defaults.
 
 ## Vue 3
 
@@ -61,15 +65,15 @@ import "sileojs/styles.css";
 
 <template>
   <SileoToaster position="top-right" theme="system" />
-  <button @click="sileo.success({ title: 'Listo' })">Guardar</button>
+  <button @click="sileo.success({ title: 'Done' })">Save</button>
 </template>
 ```
 
-### Sin componente (plugin + `$sileo` global)
+### No component (plugin + global `$sileo`)
 
-El plugin monta el toaster al arrancar y deja `$sileo` disponible en todas las
-plantillas, así que no hace falta poner `<SileoToaster />` en ningún sitio ni
-importar nada en cada componente:
+The plugin mounts the toaster on boot and makes `$sileo` available in every
+template, so you never place `<SileoToaster />` anywhere nor import anything in
+each component:
 
 ```js
 // main.js
@@ -85,19 +89,19 @@ createApp(App)
 
 ```vue
 <template>
-  <button @click="$sileo.success({ title: 'Guardado' })">Guardar</button>
+  <button @click="$sileo.success({ title: 'Saved' })">Save</button>
 </template>
 ```
 
-`$sileo` solo existe en la plantilla (es una `globalProperty`). Dentro de
-`<script setup>` usa `import { sileo } from "sileojs"` o `inject("sileo")`.
+`$sileo` only exists inside the template (it is a `globalProperty`). In
+`<script setup>` use `import { sileo } from "sileojs"` or `inject("sileo")`.
 
-Pasa `{ mount: false }` si prefieres montar el toaster tú (o usar el
-componente).
+Pass `{ mount: false }` if you would rather mount the toaster yourself (or use
+the component).
 
-## Otros frameworks
+## Other frameworks
 
-El core no sabe nada de frameworks. El patrón es siempre el mismo:
+The core knows nothing about frameworks. The pattern is always the same:
 
 ```js
 // React
@@ -117,158 +121,157 @@ ngOnInit()   { this.toaster = createToaster(); }
 ngOnDestroy(){ this.toaster.destroy(); }
 ```
 
-`destroy` usa `this`, así que hay que llamarlo sobre el toaster
-(`() => toaster.destroy()`), no pasarlo suelto como callback.
+`destroy` uses `this`, so call it on the toaster (`() => toaster.destroy()`)
+rather than passing it bare as a callback.
 
-La demo (`demo/index.html`) trae el mismo ejemplo para cada framework en
-pestañas.
+The demo (`demo/index.html`) carries the same example for each framework in
+tabs.
 
 ## API
 
 ### `sileo`
 
-| Método | Descripción |
+| Method | Description |
 | --- | --- |
-| `sileo.show(opts)` | Usa `opts.type` como estado |
-| `sileo.success/error/warning/info/action/loading(opts)` | Atajos por estado |
+| `sileo.show(opts)` | Uses `opts.type` as the state |
+| `sileo.success/error/warning/info/action/loading(opts)` | Shorthands per state |
 | `sileo.promise(promise \| () => promise, opts)` | `loading` → `success` / `error` / `action` |
-| `sileo.update(id, opts)` | Muta un toast vivo (colapsa, cambia, reabre) |
-| `sileo.dismiss(id)` | Salida animada |
-| `sileo.clear(position?)` | Limpia todo o una posición |
+| `sileo.update(id, opts)` | Mutates a live toast (collapses, swaps, reopens) |
+| `sileo.dismiss(id)` | Animated exit |
+| `sileo.clear(position?)` | Clears everything, or one position |
 
-Devuelven el `id` del toast (por defecto `"sileo-default"`, así que llamadas
-repetidas **reemplazan** el mismo toast; pasa un `id` propio para apilar).
+They return the toast's `id` (`"sileo-default"` by default, so repeated calls
+**replace** the same toast; pass your own `id` to stack them).
 
-### Opciones del toast
+### Toast options
 
-| Opción | Tipo | Default |
+| Option | Type | Default |
 | --- | --- | --- |
-| `title` | `string` | el estado |
+| `title` | `string` | the state |
 | `description` | `string \| Node \| { html }` | — |
 | `type` / `state` | `success \| loading \| error \| warning \| info \| action` | `success` |
-| `position` | una de las 6 posiciones | la del toaster |
-| `duration` | `number \| null` (`null` = persistente) | `6000` |
-| `icon` | `string \| Node \| { html }` | icono del estado |
-| `styles` | `{ title, description, badge, button }` (clases CSS) | — |
-| `fill` | color del panel | según tema |
-| `roundness` | `number` (escala el blur del gooey) | `16` |
-| `autopilot` | `false \| { expand, collapse }` (ms) | expande a 150ms, colapsa a 4000ms |
+| `position` | one of the 6 positions | the toaster's |
+| `duration` | `number \| null` (`null` = it stays) | `6000` |
+| `icon` | `string \| Node \| { html }` | the state's icon |
+| `styles` | `{ title, description, badge, button }` (CSS classes) | — |
+| `fill` | panel colour | per theme |
+| `roundness` | `number` (scales the gooey blur) | `16` |
+| `autopilot` | `false \| { expand, collapse }` (ms) | opens at 150ms, closes at 4000ms |
 | `button` | `{ title, onClick }` | — |
 | `id` | `string` | `"sileo-default"` |
 
-### Opciones del toaster
+### Toaster options
 
-`position`, `theme` (`light \| dark \| system`), `offset` (número/string o
-`{ top, right, bottom, left }`), `options` (defaults para todos los toasts),
-`visibleToasts` (tabs visibles del stack), `container` (default `document.body`).
+`position`, `theme` (`light \| dark \| system`), `offset` (number/string or
+`{ top, right, bottom, left }`), `options` (defaults for every toast),
+`visibleToasts` (tabs visible in the stack), `container` (default
+`document.body`).
 
-El toaster es único para toda la página: `createToaster()` devuelve el que ya
-hubiera (aplicándole las opciones nuevas). `getToaster()` devuelve el montado o
-`null`, y el componente de Vue lo usa para destruir solo el que creó él.
+The toaster is a single one for the whole page: `createToaster()` returns the
+existing one (applying the new options to it). `getToaster()` returns the mounted
+one or `null`, and the Vue component uses it to destroy only the one it created.
 
-## Interacción
+## Interaction
 
-- **Hover / focus** → expande el panel y **pausa** el auto-dismiss.
-- **Arrastrar** vertical > 30px → descarta.
-- `prefers-reduced-motion` desactiva todo el movimiento.
+- **Hover / focus** → opens the panel and **pauses** the auto-dismiss.
+- **Drag** vertically > 30px → dismisses.
+- `prefers-reduced-motion` turns off all movement.
 
-## Fila de tabs solapadas
+## The overlapping tab row
 
-Cuando hay varios toasts en la misma posición no se apilan como lista: forman una
-**fila de pestañas solapadas a la altura del título**. La tab enfocada muestra su
-icono, su título y su mensaje; las demás se encogen a un círculo con solo el
-icono y se montan sobre la vecina. Nada baja: solo el panel de la enfocada.
+When several toasts share a position they do not stack as a list: they form an
+**overlapping row of tabs at the title's height**. The focused tab shows its
+icon, its title and its message; the rest shrink to a circle with just the icon
+and ride over their neighbour. Nothing drops but the focused one's panel.
 
-- En reposo las tabs de atrás quedan montadas unas sobre otras, como una baraja,
-  enseñando solo su icono. El enfoque es la tab del borde de la pantalla (el
-  toast más nuevo), y un toast nuevo se lleva el enfoque.
-- El icono se arrima al borde por el que asoma la tab, que depende de la
-  posición: en las de la derecha la fila crece hacia dentro y asoma el lado
-  izquierdo; en las de la izquierda y el centro, el derecho.
-- Al entrar el cursor la baraja se abre: aparecen **todas** las notificaciones
-  (el corte de tres es solo para el reposo) y la tab del frente abre su panel.
-- **Solo la tab enfocada se ensancha**; las demás se quedan en su icono. Pero se
-  ensancha siempre al **mismo** ancho, el de la más ancha del stack: así lo que
-  crece compensa lo que se corre y la tab que señalas no se escapa del puntero.
-  Si midiera lo suyo, al enfocar una de título corto el foco saltaría a la vecina.
-- La enfocada conserva su `z-index` natural: va por debajo de las que tiene
-  delante y por encima de las de atrás, como una pestaña. Si se pusiera encima de
-  todo, al enfocar una del medio se comería a las que quedan entre ella y el
-  borde de la pantalla. Su contenido arranca pasado el trozo que le tapa la de
-  delante, para que el icono y el título se vean enteros.
-- Si la fila no cabe en el ancho del toaster, se recorta primero el ancho de la
-  enfocada y luego lo que asoma de cada icono, antes que desbordar: una tab fuera
-  del viewport quedaría fuera de la zona de hover y sería inalcanzable.
-- Al mover el cursor a otro círculo, el enfoque salta a esa tab: se ensancha en su
-  sitio para mostrar su título, abre su mensaje, corre las de atrás y la anterior
-  vuelve a ser un círculo.
-- Mientras el cursor está dentro, el `autopilot` deja de contar: no cierra el
-  panel que estás señalando.
-- Al salir el cursor, el enfoque vuelve al frente y todo se cierra.
-- En reposo se ven 3 tabs (`--sileo-stack-max` / opción `visibleToasts`) y, si
-  hay más, aparece un **`+`** al final del mazo: solo avisa de que quedan otras,
-  el número exacto se ve al abrir la fila. La enfocada nunca se oculta, aunque
-  lleguen toasts nuevos.
-- El icono de cada tab se arrima al borde por el que asoma, que depende de la
-  posición: en las de la derecha la fila crece hacia dentro y asoma el lado
-  izquierdo; en las de la izquierda y el centro, el derecho.
+- At rest the tabs behind sit on top of one another like a deck, showing only
+  their icon. Focus goes to the tab at the screen edge (the newest toast), and a
+  new toast takes focus.
+- The icon hugs the edge the tab peeks from, which depends on the position: in
+  the right-hand ones the row grows inwards and the left side peeks; in the left
+  and centre ones, the right side.
+- When the pointer comes in the deck opens: **every** notification shows up (the
+  cut at three is only for the resting state) and the front tab opens its panel.
+- **Only the focused tab widens**; the rest stay as their icon. But it always
+  widens to the **same** width, that of the widest in the stack: what it grows
+  offsets what it shifts, so the tab you are pointing at does not slip away from
+  the pointer. If it took its own width, focusing a short-titled one would bounce
+  focus to its neighbour.
+- The focused tab keeps its natural `z-index`: below the ones in front of it and
+  above the ones behind, like a real tab. Put on top of everything, focusing a
+  middle one would swallow the ones between it and the screen edge.
+- If the row does not fit the toaster's width, the focused tab's width is
+  trimmed first and then how much each icon peeks, rather than overflowing: a tab
+  outside the viewport would fall outside the hover area and be unreachable.
+- Moving the pointer to another circle jumps focus to that tab: it widens in
+  place to show its title, opens its message, pushes the ones behind and the
+  previous one goes back to being a circle.
+- While the pointer is inside, the `autopilot` stops counting: it will not close
+  the panel you are pointing at.
+- When the pointer leaves, focus goes back to the front and everything closes.
+- At rest 3 tabs are visible (`--sileo-stack-max` / the `visibleToasts` option)
+  and, if there are more, a **`+`** shows up at the end of the deck: it only
+  tells you there are others; the exact number shows when the row opens. The
+  focused tab is never hidden, even as new toasts arrive.
 
-Las posiciones son una sola recurrencia, del borde de la pantalla hacia dentro:
+The positions are a single recurrence, from the screen edge inwards:
 
 ```
 x[0]   = 0
-x[i+1] = x[i] + ancho(i) - tab-overlap
-ancho(i) = (i enfocada ? ancho de su pill : alto del toast)
+x[i+1] = x[i] + width(i) - tab-overlap
+width(i) = (i focused ? its pill's width : the toast's height)
 ```
 
-El JS publica `--_tx` (corrimiento en la fila), `--_i` (profundidad en z) y
-`--_sh` (alto del stack); CSS deriva el `translate`, el `z-index` y el ancho de
-cada tab (`--_rw`, que es `--_pw` en la enfocada y `--sileo-height` en las
-demás). El corrimiento va sobre la pill y la cabecera, no sobre la raíz, para que
-el panel quede siempre pegado al borde. El viewport mide exactamente el stack y
-hace de zona de hover, así que moverse entre tabs no lo cierra.
+The JS publishes `--_tx` (shift along the row), `--_i` (depth in z) and `--_sh`
+(stack height); CSS derives the `translate`, the `z-index` and each tab's width
+(`--_rw`, which is `--_pw` on the focused one and `--sileo-height` on the rest).
+The shift goes on the pill and the header, not on the root, so the panel always
+stays glued to the edge. The viewport measures exactly the stack and acts as the
+hover area, so moving between tabs never closes it.
 
-## Cómo funciona el CSS
+## How the CSS works
 
-El truco visual del original son dos rectángulos y un filtro SVG:
+The original's visual trick is two rectangles and an SVG filter:
 
-1. **pill** (la cápsula del header) y **body** (el panel) son dos `div` con
-   `border-radius`, dentro de una capa con `filter: url(#sileo-goo-N)`.
-2. El filtro es `feGaussianBlur` → `feColorMatrix` (alfa ×20 −10): convierte el
-   blur en un borde duro, y ahí es donde dos formas cercanas se **funden**
+1. **pill** (the header capsule) and **body** (the panel) are two `div`s with
+   `border-radius`, inside a layer with `filter: url(#sileo-goo-N)`.
+2. The filter is `feGaussianBlur` → `feColorMatrix` (alpha ×20 −10): it turns the
+   blur into a hard edge, and that is where two nearby shapes **merge**
    (metaballs).
-3. El color del puente **no** sale del blur: en sRGB sin premultiplicar lo
-   transparente es negro, así que el puente salía gris oscuro. Se inunda con
-   `feFlood` (cuyo `flood-color` es `var(--sileo-fill)`, heredado del toast) y se
-   recorta con el alfa del umbral; el `SourceGraphic` va encima para que las
-   formas conserven el borde nítido. Por eso el filtro va uno por toast.
-4. Al expandir, el pill crece `blur × 3` hacia abajo para provocar ese solape.
-5. El borde superior (`top-*`) reusa la misma geometría con `scaleY(-1)`.
-6. La sombra va **después** en la cadena de filtros del canvas
-   (`filter: var(--sileo-goo) var(--sileo-shadow)`), así cae sobre la silueta ya
-   fundida. Dentro del filtro no serviría: el umbral de alfa se la comería.
+3. The bridge's colour does **not** come from the blur: in unpremultiplied sRGB
+   transparent is black, so the bridge came out dark grey. It is flooded with
+   `feFlood` (whose `flood-color` is `var(--sileo-fill)`, inherited from the
+   toast) and clipped by the thresholded alpha; the `SourceGraphic` goes on top
+   so the shapes keep their crisp edge. That is why there is one filter per
+   toast.
+4. On expanding, the pill grows `blur × 3` downwards to force that overlap.
+5. The top edge (`top-*`) reuses the same geometry with `scaleY(-1)`.
+6. The shadow goes **after** in the canvas's filter chain
+   (`filter: var(--sileo-goo) var(--sileo-shadow)`), so it falls on the already
+   merged silhouette. Inside the filter it would be useless: the alpha threshold
+   would eat it.
 
-JS solo publica dos medidas vía `ResizeObserver`:
+JS only publishes two measurements through `ResizeObserver`:
 
 ```
---_pw   ancho del pill  = scrollWidth del header + padding + 10
---_ch   alto del contenido = scrollHeight del panel
+--_pw   pill width     = header scrollWidth + padding + 10
+--_ch   content height = panel scrollHeight
 ```
 
-y el resto lo deriva CSS:
+and CSS derives the rest:
 
 ```css
 --_exp: max(calc(var(--sileo-height) * 2.25),
             calc(var(--sileo-height) + var(--_ch)));
 ```
 
-El spring (`bounce: 0.25`) es la función `linear()` de
-`--sileo-spring-easing`; al colapsar se cambia a `--sileo-ease-flat` (sin
-overshoot), replicando el `bounce: 0` del original.
+The spring (`bounce: 0.25`) is the `linear()` function in
+`--sileo-spring-easing`; on collapse it switches to `--sileo-ease-flat` (no
+overshoot), reproducing the original's `bounce: 0`.
 
-## Personalización
+## Customising
 
-Todo son custom properties:
+It is all custom properties:
 
 ```css
 :root {
@@ -278,51 +281,51 @@ Todo son custom properties:
   --sileo-duration: 500ms;
   --sileo-state-success: oklch(0.72 0.19 150);
 
-  /* fila de tabs */
-  --sileo-tab-overlap: 18px;     /* solape en reposo (baraja) */
-  --sileo-tab-overlap-hot: 12px; /* solape con el cursor dentro */
-  --sileo-stack-max: 3;          /* tabs visibles */
-  --sileo-gap: 12px;             /* separación del borde de la pantalla */
+  /* tab row */
+  --sileo-tab-overlap: 20px;     /* overlap at rest (the deck) */
+  --sileo-tab-overlap-hot: 12px; /* overlap with the pointer inside */
+  --sileo-stack-max: 3;          /* visible tabs */
+  --sileo-gap: 12px;             /* distance from the screen edge */
   --sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.18));
 }
 ```
 
-La sombra depende del relleno, no del gusto: es lo que separa una tab de la que
-tiene detrás. Con cápsulas claras basta una sombra oscura; con `theme: "light"`
-la cápsula es oscura y una sombra negra sobre otra cápsula oscura no separa nada,
-así que ahí se le suma un filo claro. Si cambias `--sileo-fill` a mano, ajusta
-también `--sileo-shadow`.
+The shadow depends on the fill, not on taste: it is what separates a tab from the
+one behind it. With light capsules a dark shadow is enough; with
+`theme: "light"` the capsule is dark and a black shadow over another dark capsule
+separates nothing, so there it also gets a light rim. If you change
+`--sileo-fill` by hand, adjust `--sileo-shadow` too.
 
-`--sileo-height`, `--sileo-tab-overlap` y `--sileo-stack-max` están declaradas con
-`@property`, así que el JS las lee ya resueltas a px y puedes escribirlas en
-cualquier unidad.
+`--sileo-height`, `--sileo-tab-overlap` and `--sileo-stack-max` are declared with
+`@property`, so the JS reads them already resolved to px and you can write them
+in any unit.
 
-## Pruebas
+## Tests
 
-Dos suites de aserciones que corren en el navegador, sin dependencias:
+Two assertion suites that run in the browser, with no dependencies:
 
-- `demo/spec.html` — el core: orden del stack, corrimientos, foco, `z-index`,
-  timers, autopilot frente al cursor, arrastre y `promise`.
-- `demo/spec-vue.html` — el adaptador de Vue 3 (plugin con `$sileo` global,
-  componente con `useSileo()`, y que desmontar un componente no se lleve por
-  delante el toaster que montó otro). Carga Vue desde CDN con un import map.
+- `demo/spec.html` — the core: stack order, shifts, focus, `z-index`, timers,
+  autopilot versus the pointer, dragging and `promise`.
+- `demo/spec-vue.html` — the Vue 3 adapter (plugin with global `$sileo`,
+  component with `useSileo()`, and that unmounting a component does not take down
+  a toaster someone else mounted). Loads Vue from a CDN with an import map.
 
-Ábrelas en el navegador: cada una imprime PASS/FAIL y un `TODO OK` al final.
+Open them in the browser: each prints PASS/FAIL and a `TODO OK` at the end.
 
 ## Demo
 
-Los módulos ES necesitan un servidor con MIME correcto (`python -m http.server`
-sirve `.js` como `text/plain` en Windows y Chrome lo rechaza):
+ES modules need a server with the right MIME type (`python -m http.server`
+serves `.js` as `text/plain` on Windows and Chrome rejects it):
 
 ```bash
 npx serve .
-# abre http://localhost:3000/demo/
+# open http://localhost:3000/demo/
 ```
 
-## Compatibilidad
+## Browser support
 
 Chrome/Edge 113+, Safari 16.4+, Firefox 128+ (`linear()`, `oklch()`,
-`color-mix()`, `@property`, propiedades `translate`/`scale`). Sin build step, sin
-dependencias.
+`color-mix()`, `@property`, the `translate`/`scale` properties). No build step,
+no dependencies.
 
-Diseño original: [Aaryan Kapoor](https://github.com/hiaaryan/sileo) · MIT.
+Original design: [Aaryan Kapoor](https://github.com/hiaaryan/sileo) · MIT.
