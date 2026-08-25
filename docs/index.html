@@ -662,6 +662,14 @@ export class AppComponent implements OnInit, OnDestroy {
 						texto plano, así que no hay riesgo de inyección al pintar datos de
 						usuario.
 					</p>
+					<div class="nota">
+						Si pasas un <strong>nodo</strong>, es tuyo: puedes guardarlo, ponerle
+						controles y cambiar su contenido en caliente. Como el toast reutiliza el
+						mismo nodo, tocarlo no rehace la notificación ni cierra el panel — al
+						revés que <code>sileo.update()</code>, que sí la rehace. La demo lo usa
+						para un reproductor con botones de anterior/siguiente que cambian el
+						texto de esa misma notificación.
+					</div>
 					<div class="codigo"><pre><code>sileo.info({
   id: "gracias",
   title: "Gracias",
@@ -760,20 +768,29 @@ toaster.destroy();                            // desmontar y limpiar</code></pre
 						el panel de la enfocada.
 					</p>
 					<ul>
-						<li>En reposo las tabs de atrás van montadas, como una baraja, enseñando solo su icono. El icono se arrima al borde por el que asoma la tab: en las posiciones de la derecha la fila crece hacia dentro y asoma el lado izquierdo; en las de la izquierda y el centro, el derecho.</li>
+						<li>Las tabs de atrás enseñan solo su icono, y el icono se arrima al borde por el que asoma la tab —en las posiciones de la derecha la fila crece hacia dentro y asoma el lado izquierdo; en las de la izquierda y el centro, el derecho—. Vale igual en reposo y con el cursor encima.</li>
 						<li>El enfoque es la tab del borde de la pantalla, el toast más nuevo. Un toast nuevo se lleva el enfoque.</li>
-						<li>Al entrar el cursor la baraja se abre —el solape baja de <code>18px</code> a <code>12px</code>— y la del frente abre su panel.</li>
-						<li>Se ven 3 tabs (<code>--sileo-stack-max</code> o <code>visibleToasts</code>). La enfocada nunca se oculta, aunque lleguen toasts nuevos.</li>
+						<li>Al entrar el cursor la baraja se abre: aparecen <strong>todas</strong> las notificaciones —el corte de tres es solo para el reposo— y la del frente abre su panel.</li>
+						<li><strong>Solo la tab enfocada se ensancha</strong>; las demás se quedan en su icono. Pero se ensancha siempre al <em>mismo</em> ancho, el de la más ancha del stack: así lo que crece compensa lo que se corre y la tab que señalas no se escapa del puntero. Si midiera lo suyo, al enfocar una de título corto el foco saltaría a la vecina.</li>
+						<li>La enfocada conserva su <code>z-index</code> natural: va por debajo de las que tiene delante y por encima de las de atrás, como una pestaña. Si se pusiera encima de todo, al enfocar una del medio se comería a las que quedan entre ella y el borde. Su contenido arranca pasado el trozo que le tapa la de delante, para que el icono y el título se vean enteros.</li>
+						<li>Si la fila no cabe, se recorta primero el ancho de la enfocada y luego lo que asoma de cada icono: una tab fuera del viewport quedaría fuera de la zona de hover.</li>
+						<li>En reposo se ven 3 tabs (<code>--sileo-stack-max</code> o <code>visibleToasts</code>) y, si hay más, aparece un <strong><code>+</code></strong> al final del mazo: solo avisa de que quedan otras, el número exacto se ve al abrir la fila. La enfocada nunca se oculta, aunque lleguen toasts nuevos.</li>
 					</ul>
 					<div class="probar">
 						<button type="button" data-run="stack">Apilar 3</button>
-						<button type="button" data-run="stack5">Apilar 5</button>
+						<button type="button" data-run="stack5">Apilar 5 (verás el +2)</button>
 						<button type="button" data-run="clear">Limpiar</button>
 					</div>
 					<p>Las posiciones salen de una sola recurrencia, del borde hacia dentro:</p>
 					<div class="codigo"><pre><code>x[0]     = 0
 x[i+1]   = x[i] + ancho(i) - tab-overlap
-ancho(i) = (i enfocada ? ancho de su cápsula : alto del toast)</code></pre></div>
+
+// en reposo
+ancho(i) = (i enfocada ? ancho de su cápsula : alto del toast)
+
+// la enfocada, siempre al mismo ancho
+ancho(i) = (i enfocada ? max(ancho de cada cápsula) : alto del toast)
+//          ^ acotado para que la fila quepa en el viewport</code></pre></div>
 				</section>
 
 				<!-- ============================================================ -->

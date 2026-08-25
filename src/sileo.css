@@ -191,12 +191,21 @@
 	appearance: none;
 }
 
-/* La tab enfocada se levanta sobre las que tiene delante: si no, la lenguesta
-   del frente le taparia la cabecera. */
+/* Solo la enfocada se ensancha, y siempre al mismo ancho: el de la mas ancha
+   (--_tw, del JS). Las demas se quedan en su icono.
+
+   Y conserva su z natural a proposito: si se pusiera por encima de todo, al
+   enfocar una del medio se comeria a las que tiene delante, que quedan entre
+   ella y el borde de la pantalla. Va debajo de esas y encima de las de atras,
+   como una pestaña de verdad. */
 [data-sileo-toast][data-focused="true"] {
-	z-index: 60;
-	--_rw: var(--_pw, var(--sileo-height));
+	--_rw: var(--_tw, var(--_pw, var(--sileo-height)));
 }
+
+/* La enfocada mantiene su contenido a la izquierda, se ensanche lo que se
+   ensanche: es la posicion natural de la pila (el padding de la cabecera), asi
+   que basta con no tocarla. Anclarla al borde de entrada la mandaba al otro
+   extremo de la pill en las posiciones de la izquierda y el centro. */
 
 /* Las tabs que pasan de --sileo-stack-max: fuera de vista, del orden de
    tabulacion y del arbol de accesibilidad, pero con caja medible. */
@@ -304,6 +313,55 @@
 	width: 0;
 	height: 0;
 	overflow: hidden;
+}
+
+/* -------------------------------- Contador -------------------------------- */
+/* El "+N" de las notificaciones que no caben en reposo. No es un toast: no se
+   anuncia, no recibe puntero y desaparece al abrirse la baraja, porque ahi ya
+   se ven todas. */
+
+[data-sileo-count] {
+	position: absolute;
+	inset-inline-start: 0;
+	height: var(--sileo-height);
+	min-width: var(--sileo-height);
+	padding: 0 0.6rem;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border-radius: var(--sileo-roundness);
+	background: var(--sileo-fill);
+	color: var(--sileo-desc-color, rgb(0 0 0 / 0.45));
+	font-size: 0.78rem;
+	font-weight: 500;
+	line-height: 1;
+	translate: var(--_cx, 200px) 0;
+	filter: var(--sileo-shadow, opacity(1));
+	z-index: calc(40 - var(--_ci, 0));
+	pointer-events: none;
+	opacity: 0;
+	transition:
+		opacity calc(var(--sileo-duration) * 0.4) ease,
+		translate var(--sileo-duration) var(--sileo-spring-easing);
+}
+
+[data-sileo-viewport][data-position^="top"] [data-sileo-count] { top: 0; }
+[data-sileo-viewport][data-position^="bottom"] [data-sileo-count] { bottom: 0; }
+
+/* Se ancla como las pills: al mismo borde y, en el centro, al eje. Si no, el
+   corrimiento que calcula el JS se mide desde otro sitio y cae fuera de la fila. */
+[data-sileo-viewport][data-position$="right"] [data-sileo-count] {
+	inset-inline-start: auto;
+	inset-inline-end: 0;
+}
+
+[data-sileo-viewport][data-position$="center"] [data-sileo-count] {
+	inset-inline-start: 50%;
+	translate: calc(-50% + var(--_cx, 0px)) 0;
+}
+
+[data-sileo-viewport]:not([data-hot="true"]) [data-sileo-count][data-visible="true"] {
+	opacity: 1;
 }
 
 /* --------------------------------- Shapes --------------------------------- */
@@ -428,7 +486,7 @@
 /* En reposo de cada tab de atras solo asoma su borde de ataque: el icono se
    arrima a ese lado para caber entero en lo que se ve. En las posiciones a la
    derecha la fila crece hacia la izquierda, asi que asoma el lado izquierdo. */
-[data-sileo-viewport]:not([data-hot="true"])
+[data-sileo-viewport]
 	[data-sileo-toast]:not([data-focused="true"])
 	[data-sileo-header-stack] {
 	left: 7px;
@@ -437,20 +495,14 @@
 
 /* En las de la izquierda y el centro crece al reves y asoma el derecho, asi que
    ademas hay que invertir el orden para que el icono quede al final. */
-[data-sileo-viewport]:not([data-hot="true"]):is(
-		[data-position$="left"],
-		[data-position$="center"]
-	)
+[data-sileo-viewport]:is([data-position$="left"], [data-position$="center"])
 	[data-sileo-toast]:not([data-focused="true"])
 	[data-sileo-header-stack] {
 	left: auto;
 	right: 7px;
 }
 
-[data-sileo-viewport]:not([data-hot="true"]):is(
-		[data-position$="left"],
-		[data-position$="center"]
-	)
+[data-sileo-viewport]:is([data-position$="left"], [data-position$="center"])
 	[data-sileo-toast]:not([data-focused="true"])
 	[data-sileo-header-inner] {
 	flex-direction: row-reverse;

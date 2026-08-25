@@ -17,6 +17,8 @@ const MIN_EXPAND_RATIO = 2.25; // espeja el max() de --_exp en el CSS
 /* Valores de respaldo si el CSS no esta cargado; el CSS es la fuente real. */
 const TAB_OVERLAP = 12;
 const STACK_MAX = 3;
+const MIN_STEP = 12; // lo mínimo que puede asomar una tab cuando no cabe la fila
+const CHIP_OVERLAP = 8; // el contador solo se monta un poco: su texto debe leerse
 const HOVER_LEAVE_MS = 140;
 
 /* --------------------------------- Timing --------------------------------- */
@@ -671,8 +673,14 @@ class Toaster {
 			this._applyOffset(vp, pos);
 			this.container.appendChild(vp);
 			this.viewports.set(pos, vp);
+			// El "+N" de las que no caben en reposo. Vive en el viewport, no es un
+			// toast: no se anuncia ni se puede enfocar.
+			const chip = el("div", { "data-sileo-count": "", "aria-hidden": "true" });
+			vp.appendChild(chip);
+
 			this.stacks.set(pos, {
 				el: vp,
+				chip,
 				hot: false,
 				focusedId: undefined,
 				order: [],
@@ -815,38 +823,79 @@ class Toaster {
 		if (!st || st.laying) return;
 		const m = this._metrics(pos);
 		const align = pillAlign(pos);
-		const row = [];
-		let x = 0;
-		let height = m.h;
+		// unica lectura de layout, antes de escribir nada
+		const disponible = st.el.clientWidth || 0;
 
+		// Con el cursor dentro se ven todas; en reposo solo --sileo-stack-max y el
+		// resto se resume en el contador. La enfocada nunca se oculta.
+		const fila = [];
+		let ocultas = 0;
 		st.order.forEach((id, i) => {
 			const toast = this.toasts.get(id);
 			if (!toast) return;
 			const focused = id === st.focusedId;
-			// la enfocada nunca se oculta, aunque un toast nuevo la empuje al fondo
-			if (i >= m.max && !focused) {
+			if (!st.hot && i >= m.max && !focused) {
 				toast.setSlot({ i, tx: 0, focused, hidden: true });
+				ocultas++;
 				return;
 			}
-			row.push({ toast, i, focused, x, w: focused ? Math.max(m.h, toast.pillW) : m.h });
-			if (focused) height = Math.max(height, toast.slotHeight(m.h));
-			x += row[row.length - 1].w - m.overlap;
+			fila.push({ toast, i, focused });
 		});
+
+		// Solo la enfocada se ensancha; las demas se quedan en su icono. Pero se
+		// ensancha siempre al MISMO ancho, el de la mas ancha: asi lo que crece
+		// compensa lo que se corre y su borde de entrada no se mueve al enfocarla.
+		// Si midiera lo suyo, una tab de titulo corto se escaparia del puntero.
+		let ancho = m.h;
+		for (const slot of fila) ancho = Math.max(ancho, slot.toast.pillW || m.h);
+
+		// La fila tiene que caber en el viewport: lo que se sale queda fuera de la
+		// zona de hover, y esa tab seria inalcanzable. Se recorta primero el ancho
+		// de la enfocada y luego lo que asoma de cada icono.
+		const huecos = fila.length - 1;
+		let pasoIcono = m.h - m.overlap;
+		if (huecos > 0 && disponible > 0) {
+			ancho = Math.max(m.h, Math.min(ancho, disponible - huecos * MIN_STEP));
+			pasoIcono = Math.min(pasoIcono, (disponible - ancho) / huecos);
+		}
+		st.el.style.setProperty("--_tw", `${Math.round(ancho)}px`);
+
+		let x = 0;
+		let height = m.h;
+		for (const slot of fila) {
+			slot.x = x;
+			slot.w = slot.focused ? ancho : m.h;
+			if (slot.focused) height = Math.max(height, slot.toast.slotHeight(m.h));
+			x += slot.focused ? slot.w - m.overlap : pasoIcono;
+		}
 
 		// El ancho de la fila solo hace falta para centrarla en las posiciones
 		// *-center; en las demas basta el signo del corrimiento.
-		const last = row[row.length - 1];
-		const width = last ? last.x + last.w : 0;
+		const ultima = fila[fila.length - 1];
+		const finFila = ultima ? ultima.x + ultima.w : 0;
+		// El contador se monta solo CHIP_OVERLAP sobre la ultima: si se montara
+		// como una tab mas, el numero quedaria debajo y solo se leeria el "+".
+		const chipX = Math.max(0, finFila - CHIP_OVERLAP);
+		const anchoFila = ocultas > 0 ? chipX + m.h : finFila;
+		const corrimiento = (posX, w) =>
+			align === "right" ? -posX : align === "left" ? posX : posX + w / 2 - anchoFila / 2;
 
-		for (const slot of row) {
-			const tx =
-				align === "right"
-					? -slot.x
-					: align === "left"
-						? slot.x
-						: slot.x + slot.w / 2 - width / 2;
-			slot.toast.setSlot({ i: slot.i, tx, focused: slot.focused, hidden: false });
+		for (const slot of fila) {
+			slot.toast.setSlot({
+				i: slot.i,
+				tx: corrimiento(slot.x, slot.w),
+				focused: slot.focused,
+				hidden: false,
+			});
 		}
+
+		// El indicador va al final de la fila, como una carta mas del mazo. Solo
+		// dice que hay mas, sin cuantas: el numero exacto se ve al abrirla.
+		st.chip.textContent = "+";
+		st.chip.style.setProperty("--_cx", `${Math.round(corrimiento(chipX, m.h))}px`);
+		st.chip.style.setProperty("--_ci", String(fila.length));
+		if (ocultas > 0) st.chip.setAttribute("data-visible", "true");
+		else st.chip.removeAttribute("data-visible");
 
 		st.el.style.setProperty("--_sh", `${height}px`);
 	}
@@ -918,7 +967,8 @@ class Toaster {
 
 	_gcViewports() {
 		for (const [pos, vp] of this.viewports) {
-			if (!vp.childElementCount) {
+			// el contador es hijo fijo del viewport: lo que cuenta son los toasts
+			if (!vp.querySelector("[data-sileo-toast]")) {
 				clearTimeout(this.stacks.get(pos)?.leaveTimer);
 				vp.remove();
 				this.viewports.delete(pos);

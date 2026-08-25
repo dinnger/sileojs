@@ -182,16 +182,33 @@ icono y se montan sobre la vecina. Nada baja: solo el panel de la enfocada.
 - El icono se arrima al borde por el que asoma la tab, que depende de la
   posición: en las de la derecha la fila crece hacia dentro y asoma el lado
   izquierdo; en las de la izquierda y el centro, el derecho.
-- Al entrar el cursor, la baraja se abre —el solape baja de `18px` a `12px`— y la
-  tab del frente abre su panel.
+- Al entrar el cursor la baraja se abre: aparecen **todas** las notificaciones
+  (el corte de tres es solo para el reposo) y la tab del frente abre su panel.
+- **Solo la tab enfocada se ensancha**; las demás se quedan en su icono. Pero se
+  ensancha siempre al **mismo** ancho, el de la más ancha del stack: así lo que
+  crece compensa lo que se corre y la tab que señalas no se escapa del puntero.
+  Si midiera lo suyo, al enfocar una de título corto el foco saltaría a la vecina.
+- La enfocada conserva su `z-index` natural: va por debajo de las que tiene
+  delante y por encima de las de atrás, como una pestaña. Si se pusiera encima de
+  todo, al enfocar una del medio se comería a las que quedan entre ella y el
+  borde de la pantalla. Su contenido arranca pasado el trozo que le tapa la de
+  delante, para que el icono y el título se vean enteros.
+- Si la fila no cabe en el ancho del toaster, se recorta primero el ancho de la
+  enfocada y luego lo que asoma de cada icono, antes que desbordar: una tab fuera
+  del viewport quedaría fuera de la zona de hover y sería inalcanzable.
 - Al mover el cursor a otro círculo, el enfoque salta a esa tab: se ensancha en su
   sitio para mostrar su título, abre su mensaje, corre las de atrás y la anterior
   vuelve a ser un círculo.
 - Mientras el cursor está dentro, el `autopilot` deja de contar: no cierra el
   panel que estás señalando.
 - Al salir el cursor, el enfoque vuelve al frente y todo se cierra.
-- Se ven 3 tabs (`--sileo-stack-max` / opción `visibleToasts`). La enfocada nunca
-  se oculta, aunque toasts nuevos la empujen al fondo.
+- En reposo se ven 3 tabs (`--sileo-stack-max` / opción `visibleToasts`) y, si
+  hay más, aparece un **`+`** al final del mazo: solo avisa de que quedan otras,
+  el número exacto se ve al abrir la fila. La enfocada nunca se oculta, aunque
+  lleguen toasts nuevos.
+- El icono de cada tab se arrima al borde por el que asoma, que depende de la
+  posición: en las de la derecha la fila crece hacia dentro y asoma el lado
+  izquierdo; en las de la izquierda y el centro, el derecho.
 
 Las posiciones son una sola recurrencia, del borde de la pantalla hacia dentro:
 

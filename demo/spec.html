@@ -1,7 +1,10 @@
 <!doctype html>
 <html><head><meta charset="utf-8">
 <link rel="stylesheet" href="../src/sileo.css">
-<style>body{margin:0;background:#fff}#log{font:12px monospace}</style>
+<style>body{margin:0;background:#fff}#log{font:12px monospace}
+/* Sin animacion: aqui se comprueba geometria y estado, no la transicion. Con
+   ella, las medidas se toman a mitad de camino y el resultado baila. */
+[data-sileo-viewport],[data-sileo-viewport] *{transition:none !important;animation:none !important}</style>
 </head><body><pre id="log"></pre>
 <script type="module">
 import { sileo, createToaster } from "../src/sileo.js";
@@ -25,6 +28,17 @@ const head = (id) => node(id).querySelector("[data-sileo-header]");
 const shOf = () => getComputedStyle(st().el).getPropertyValue("--_sh").trim();
 const fire = (el, type) => el.dispatchEvent(new PointerEvent(type, { bubbles: false }));
 const hover = (id) => fire(head(id), "pointerenter");
+// --_pw se publica un frame despues de insertar (ResizeObserver + rAF), asi que
+// las aserciones que dependen del ancho esperan a que este medido
+const medido = async (...ids) => {
+  for (let i = 0; i < 20; i++) {
+    if (ids.every((id) => (t.toasts.get(id)?.pillW || 0) > 0)) return;
+    await sleep(25);
+  }
+  // en headless el rAF que dispara la medida puede no llegar: se fuerza, que lo
+  // que aqui se comprueba es la geometria, no el fontanero del ResizeObserver
+  for (const id of ids) t.toasts.get(id)?._measure();
+};
 
 const mk = (id, title) =>
   sileo.info({ id, title, description: `Mensaje de ${title}.`, autopilot: false });
@@ -32,6 +46,7 @@ const mk = (id, title) =>
 // ---------------------------------------------------------------- 1 solo toast
 mk("a", "Uno");
 await sleep(50);
+await medido("a");
 ok("1 toast: enfocado", node("a").dataset.focused === "true");
 ok("1 toast: en el borde", txOf("a") === 0, String(txOf("a")));
 ok("1 toast: ancho = su pill", rwOf("a") === pwOf("a"), `${rwOf("a")} vs ${pwOf("a")}`);
@@ -41,6 +56,7 @@ ok("1 toast: sin ocultar", !node("a").dataset.hidden);
 mk("b", "Dos");
 mk("c", "Tres");
 await sleep(50);
+await medido("a", "b", "c");
 ok("orden = nuevo primero", JSON.stringify(st().order) === '["c","b","a"]', JSON.stringify(st().order));
 ok("foco sigue al nuevo", st().focusedId === "c", st().focusedId);
 // La enfocada (el frente) ocupa el borde y muestra su titulo; las otras son
@@ -73,9 +89,53 @@ await sleep(50);
 ok("foco -> tab senalada", st().focusedId === "a", st().focusedId);
 ok("la nueva enfocada abre", node("a").dataset.expanded === "true");
 ok("la anterior colapsa", node("c").dataset.expanded === "false");
-ok("z de la enfocada al frente", getComputedStyle(node("a")).zIndex === "60");
-ok("la enfocada se ensancha", rwOf("a") === pwOf("a"), `${rwOf("a")} vs ${pwOf("a")}`);
-ok("la anterior vuelve a circulo", rwOf("c") === "40px", rwOf("c"));
+ok("la enfocada conserva su z natural (si no, se come a las de delante)",
+   getComputedStyle(node("a")).zIndex === String(40 - st().order.indexOf("a")),
+   getComputedStyle(node("a")).zIndex);
+await medido(...st().order);
+const anchoComun = getComputedStyle(st().el).getPropertyValue("--_tw").trim();
+ok("hover: las demas siguen pequenas",
+   st().order.filter((id) => id !== st().focusedId).every((id) => rwOf(id) === "40px"),
+   st().order.map(rwOf).join(" "));
+// se compara contra la medida del propio componente (pillW), no contra el DOM:
+// --_pw aparece un frame despues de insertar y el spec puede leerlo antes
+const anchosMedidos = st().order.map((id) => t.toasts.get(id).pillW);
+ok("hover: la senalada toma el ancho de la mas ancha",
+   rwOf(st().focusedId) === anchoComun &&
+     parseFloat(anchoComun) === Math.round(Math.max(...anchosMedidos)),
+   `${anchoComun} vs ${anchosMedidos.join(" ")}`);
+
+// La invariante que evita el salto: la tab que enfocas no se mueve. Lo que
+// crece compensa lo que se corre, porque todas se ensanchan al MISMO ancho. Si
+// cada una midiera lo suyo, una de titulo corto se escaparia del puntero.
+const pill = (id) => node(id).querySelector("[data-sileo-pill]").getBoundingClientRect();
+// un punto dentro de lo que asoma de "b" (su borde de entrada, a la izquierda)
+const puntero = pill("b").left + 6;
+hover("b");
+await sleep(120);
+const tras = pill("b");
+ok("la tab que enfocas sigue bajo el puntero", puntero >= tras.left && puntero <= tras.right,
+   `punto ${Math.round(puntero)} en ${Math.round(tras.left)}..${Math.round(tras.right)}`);
+
+// y con una del medio enfocada, ninguna queda tapada del todo
+const anchoVisible = (id) => {
+  const mia = node(id).querySelector("[data-sileo-pill]").getBoundingClientRect();
+  const z = Number(getComputedStyle(node(id)).zIndex);
+  let libre = mia.width;
+  for (const otro of st().order) {
+    if (otro === id) continue;
+    if (Number(getComputedStyle(node(otro)).zIndex) < z) continue;
+    const r = node(otro).querySelector("[data-sileo-pill]").getBoundingClientRect();
+    libre -= Math.max(0, Math.min(mia.right, r.right) - Math.max(mia.left, r.left));
+  }
+  return Math.round(libre);
+};
+ok("ninguna desaparece bajo la enfocada",
+   st().order.every((id) => anchoVisible(id) > 10),
+   st().order.map((id) => `${id}:${anchoVisible(id)}`).join(" "));
+
+hover("a");
+await sleep(120);
 
 // ------------------------------------------------- cursor sale: vuelve al frente
 fire(st().el, "pointerleave");
@@ -171,6 +231,62 @@ ok("hover: el autopilot no cierra bajo el cursor", node("ap2").dataset.expanded 
 fire(st().el, "pointerleave");
 await sleep(400);
 ok("al salir el cursor, cerrada", node("ap2").dataset.expanded !== "true");
+
+// duration: null -> no se cierra sola (no se le agenda ningun timer)
+sileo.info({ id: "fija", title: "Se queda", description: "No se cierra sola.", duration: null });
+await sleep(200);
+ok("duration null: sin timer de cierre",
+   ![...t.timers.keys()].some((k) => k.startsWith("fija:")),
+   JSON.stringify([...t.timers.keys()]));
+ok("duration null: sigue viva", t.toasts.has("fija"));
+
+
+// ------------------------------------------------------- contador de ocultas
+sileo.clear();
+await sleep(900);
+for (const [id, titulo] of [["c1", "Uno"], ["c2", "Dos"], ["c3", "Tres"], ["c4", "Cuatro"], ["c5", "Cinco"]]) {
+  sileo.info({ id, title: titulo, description: `Mensaje ${titulo}.`, autopilot: false, duration: null });
+}
+await sleep(400);
+const chip = () => st().el.querySelector("[data-sileo-count]");
+const visibles = () => st().order.filter((id) => !node(id).dataset.hidden).length;
+ok("reposo: solo se ven --sileo-stack-max", visibles() === 3, String(visibles()));
+ok("reposo: el indicador es solo un +", chip().textContent === "+", chip().textContent);
+ok("reposo: el indicador se ve", chip().dataset.visible === "true");
+
+fire(st().el, "pointerenter");
+await sleep(300);
+ok("hover: se ven todas", visibles() === 5, String(visibles()));
+ok("hover: el indicador desaparece", chip().dataset.visible !== "true");
+
+fire(st().el, "pointerleave");
+await sleep(400);
+ok("al salir vuelve el corte y el indicador", visibles() === 3 && chip().dataset.visible === "true",
+   `${visibles()} ${chip().textContent}`);
+
+// el indicador se ancla como las pills: al final de la fila en las 6 posiciones
+for (const posicion of ["top-left", "top-center", "bottom-right"]) {
+  t.set({ position: posicion });
+  await sleep(200);
+  const vp = t.stacks.get(posicion)?.el;
+  if (!vp) continue;
+  const pills = [...vp.querySelectorAll('[data-sileo-toast]:not([data-hidden]) [data-sileo-pill]')]
+    .map((p) => p.getBoundingClientRect());
+  const c = vp.querySelector("[data-sileo-count]").getBoundingClientRect();
+  const izq = Math.min(...pills.map((r) => r.left));
+  const der = Math.max(...pills.map((r) => r.right));
+  const alFinal = posicion.endsWith("right") ? Math.abs(izq - c.right) < 12 : Math.abs(c.left - der) < 12;
+  ok(`indicador al final de la fila en ${posicion}`, alFinal,
+     `fila ${Math.round(izq)}..${Math.round(der)} indicador ${Math.round(c.left)}..${Math.round(c.right)}`);
+}
+t.set({ position: POS });
+await sleep(200);
+
+sileo.clear();
+await sleep(900);
+sileo.info({ id: "solo", title: "Sola", description: "Una nada mas.", duration: null });
+await sleep(300);
+ok("con pocas, sin indicador", chip().dataset.visible !== "true", chip().textContent);
 
 document.getElementById("log").textContent =
   log.join("\n") + `\n\n${fails === 0 ? "TODO OK" : fails + " FALLOS"}`;
