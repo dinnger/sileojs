@@ -1,0 +1,802 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<title>Sileo · Documentation</title>
+		<link rel="stylesheet" href="../src/sileo.css" />
+		<link rel="stylesheet" href="./docs.css" />
+		<link rel="alternate" hreflang="en" href="./en.html" />
+		<link rel="alternate" hreflang="es" href="./index.html" />
+		<script>
+			/* Language: an explicit choice wins; otherwise the browser's. This runs
+			   before paint so you never see the wrong page for a moment. */
+			try {
+				const elegido = localStorage.getItem("sileo-docs-lang");
+				const nav = (navigator.language || "es").slice(0, 2).toLowerCase();
+				if ((elegido || (nav === "es" ? "es" : "en")) !== "en") {
+					location.replace("./index.html" + location.hash);
+				}
+			} catch {}
+		</script>
+	</head>
+
+	<body>
+		<a class="saltar" href="#contenido">Skip to content</a>
+
+		<div class="layout">
+			<aside class="lateral">
+				<p class="marca">Sileo <span>v0.1.1</span></p>
+				<p class="sub">Toasts with gooey morphing and spring physics.</p>
+
+				<p class="idioma">
+					<a href="./index.html" data-lang="es">ES</a>
+					<a href="./en.html" data-lang="en" aria-current="page">EN</a>
+				</p>
+
+				<details id="menu" open>
+					<summary>Sections</summary>
+					<nav aria-label="Documentation sections">
+					<h2>Start</h2>
+					<a href="#que-es">What it is</a>
+					<a href="#instalacion">Install</a>
+					<a href="#inicio-rapido">Quick start</a>
+
+					<h2>Frameworks</h2>
+					<a href="#vanilla">JavaScript / vanilla</a>
+					<a href="#vue">Vue 3</a>
+					<a href="#react">React</a>
+					<a href="#svelte">Svelte</a>
+					<a href="#angular">Angular</a>
+					<a href="#ssr">SSR and no build</a>
+
+					<h2>API</h2>
+					<a href="#api-sileo">sileo.*</a>
+					<a href="#opciones-toast">Toast options</a>
+					<a href="#opciones-toaster">Toaster options</a>
+					<a href="#exports">Exports</a>
+
+					<h2>Behaviour</h2>
+					<a href="#interaccion">Interaction</a>
+					<a href="#fila-tabs">The tab row</a>
+					<a href="#autopilot">Autopilot</a>
+
+					<h2>Styling</h2>
+					<a href="#variables">CSS variables</a>
+					<a href="#temas">Themes</a>
+					<a href="#clases">Your own classes</a>
+
+					<h2>Reference</h2>
+					<a href="#accesibilidad">Accessibility</a>
+					<a href="#compatibilidad">Browser support</a>
+					<a href="#por-dentro">How it works</a>
+					</nav>
+				</details>
+
+				<p class="enlaces">
+					<a href="https://github.com/dinnger/sileojs">GitHub ↗</a>
+					<a href="https://www.npmjs.com/package/sileojs">npm ↗</a>
+					<a href="../demo/index.html">Demo →</a>
+				</p>
+			</aside>
+
+			<main id="contenido">
+				<h1>Sileo</h1>
+				<p class="lead">
+					Toast notifications with gooey morphing and spring physics. Vanilla core,
+					zero dependencies, and all the animation in CSS. Works with any framework;
+					ships a Vue 3 adapter.
+				</p>
+				<p>
+					<a href="../demo/index.html">See the interactive demo →</a>
+					&nbsp;·&nbsp; <a href="https://github.com/dinnger/sileojs">Source on GitHub ↗</a>
+					&nbsp;·&nbsp; <a href="https://www.npmjs.com/package/sileojs">Package on npm ↗</a>
+				</p>
+
+				<!-- ============================================================ -->
+				<section id="que-es">
+					<h2 class="titulo">What it is</h2>
+					<p>
+						Sileo shows a capsule with the state and the title. Hover it and the
+						message unfolds: capsule and panel <strong>merge</strong> into a single
+						shape, with no seam, through an SVG metaball filter.
+					</p>
+					<p>
+						When several notifications are up at once they form an
+						<strong>overlapping row of tabs</strong> at the title's height. Only the
+						focused one shows its text; the rest stay as circles with their icon.
+						See <a href="#fila-tabs">The tab row</a>.
+					</p>
+					<div class="probar">
+						<button type="button" data-run="success">Try success</button>
+						<button type="button" data-run="stack">Try the row (3)</button>
+					</div>
+					<p>
+						The JavaScript only keeps the state, builds the DOM, measures two things
+						(capsule width and panel height) and places the tabs. All the movement
+						—the spring, the morphing, the entrance and the exit— is CSS.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="instalacion">
+					<h2 class="titulo">Install</h2>
+
+					<h3>With a bundler (npm, pnpm, yarn)</h3>
+					<div class="codigo"><pre><code>npm i sileojs</code></pre></div>
+					<div class="codigo"><pre><code>import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";</code></pre></div>
+
+					<div class="nota aviso">
+						<strong>The stylesheet is required.</strong> The package does not inject
+						it: without <code>sileojs/styles.css</code> there is no geometry and no
+						animation, and the toasts come out unstyled.
+					</div>
+
+					<h3>No build, straight from the browser</h3>
+					<p>It is an ES module with no dependencies, so you can import it as is:</p>
+					<div class="codigo"><pre><code>&lt;link rel="stylesheet" href="/path/to/sileojs/src/sileo.css"&gt;
+
+&lt;script type="module"&gt;
+  import { sileo, createToaster } from "/path/to/sileojs/src/sileo.js";
+  createToaster({ position: "top-right" });
+  sileo.success({ title: "Done" });
+&lt;/script&gt;</code></pre></div>
+
+					<div class="nota">
+						ES modules need a server that serves <code>.js</code> with
+						<code>Content-Type: text/javascript</code>. Careful with
+						<code>python -m http.server</code>: on Windows it serves them as
+						<code>text/plain</code> and the browser rejects them.
+						<code>npx serve .</code> works.
+					</div>
+
+					<h3>What the package ships</h3>
+					<table>
+						<thead><tr><th>Import</th><th>Contents</th></tr></thead>
+						<tbody>
+							<tr><td><code>sileojs</code></td><td>Vanilla core: <code>sileo</code>, <code>createToaster</code>, <code>getToaster</code>…</td></tr>
+							<tr><td><code>sileojs/vue</code></td><td>Vue 3 adapter: <code>SileoPlugin</code>, <code>SileoToaster</code>, <code>useSileo</code></td></tr>
+							<tr><td><code>sileojs/styles.css</code></td><td>The stylesheet</td></tr>
+						</tbody>
+					</table>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="inicio-rapido">
+					<h2 class="titulo">Quick start</h2>
+					<p>Two steps: mount the toaster once, then call <code>sileo.*()</code> from anywhere.</p>
+					<div class="codigo"><pre><code>import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";
+
+// once, when the app boots
+createToaster({ position: "top-right", theme: "system" });
+
+// from anywhere
+sileo.success({
+  title: "Saved",
+  description: "Your changes were synced with the server.",
+});</code></pre></div>
+					<div class="probar"><button type="button" data-run="quick">Try it</button></div>
+					<p>
+						<code>createToaster()</code> is optional: if you never call it, the first
+						<code>sileo.*()</code> mounts one with the defaults. Call it when you
+						want to set the position, the theme or the offsets.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="vanilla">
+					<h2 class="titulo">JavaScript / vanilla</h2>
+					<p>
+						The core knows nothing about frameworks. The pattern is always the same:
+						mount the toaster on boot, destroy it if your view goes away.
+					</p>
+					<div class="codigo"><pre><code>import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";
+
+const toaster = createToaster({
+  position: "bottom-center",
+  theme: "system",
+  offset: 24,
+});
+
+document.querySelector("#save").addEventListener("click", async () =&gt; {
+  await sileo.promise(save(), {
+    loading: { id: "save", title: "Saving", description: "One moment…" },
+    success: () =&gt; ({ title: "Saved", description: "All done." }),
+    error: (err) =&gt; ({ title: "Error", description: String(err.message) }),
+  });
+});
+
+// when leaving the page / unmounting the widget
+toaster.destroy();</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="vue">
+					<h2 class="titulo">Vue 3</h2>
+					<p>Two ways. The global one is the handiest if you use it across the app.</p>
+
+					<h3>No component: plugin and global <code>$sileo</code></h3>
+					<p>
+						The plugin mounts the toaster on boot and makes <code>$sileo</code>
+						available in every template. No component to place, nothing to import in
+						each file.
+					</p>
+					<div class="codigo"><pre><code>// main.js
+import { createApp } from "vue";
+import { SileoPlugin } from "sileojs/vue";
+import "sileojs/styles.css";
+import App from "./App.vue";
+
+createApp(App)
+  .use(SileoPlugin, { position: "top-right", theme: "system" })
+  .mount("#app");</code></pre></div>
+
+					<div class="codigo"><pre><code>&lt;!-- any component, no imports --&gt;
+&lt;template&gt;
+  &lt;button @click="$sileo.success({ title: 'Saved' })"&gt;
+    Save
+  &lt;/button&gt;
+&lt;/template&gt;</code></pre></div>
+
+					<div class="nota">
+						<code>$sileo</code> is a <em>globalProperty</em>: it only exists inside
+						the template. In <code>&lt;script setup&gt;</code> use
+						<code>import { sileo } from "sileojs"</code> or
+						<code>inject("sileo")</code> — the plugin provides it too.
+					</div>
+
+					<p>
+						The plugin takes the same options as <code>createToaster()</code>. With
+						<code>{ mount: false }</code> it registers <code>$sileo</code> and the
+						component but mounts nothing: the toaster is yours to mount.
+					</p>
+
+					<h3>With the component</h3>
+					<p>
+						Useful when you want the toaster to live and die with one view, or to
+						change its props reactively.
+					</p>
+					<div class="codigo"><pre><code>&lt;script setup&gt;
+import { SileoToaster, useSileo } from "sileojs/vue";
+import "sileojs/styles.css";
+
+const sileo = useSileo();
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;SileoToaster position="top-right" theme="system" /&gt;
+
+  &lt;button @click="sileo.success({ title: 'Saved' })"&gt;
+    Save
+  &lt;/button&gt;
+&lt;/template&gt;</code></pre></div>
+					<p>
+						Props: <code>position</code>, <code>theme</code>, <code>offset</code> and
+						<code>options</code>. Changing them reconfigures the toaster live.
+					</p>
+					<div class="nota">
+						The toaster is a single one for the whole page. If the plugin (or another
+						<code>createToaster()</code>) already mounted it, the component reuses it
+						and does <strong>not</strong> destroy it on unmount: it only destroys the
+						one it created.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="react">
+					<h2 class="titulo">React</h2>
+					<div class="codigo"><pre><code>import { useEffect } from "react";
+import { sileo, createToaster } from "sileojs";
+import "sileojs/styles.css";
+
+export default function App() {
+  useEffect(() =&gt; {
+    const toaster = createToaster({ position: "top-right", theme: "system" });
+    return () =&gt; toaster.destroy();
+  }, []);
+
+  return (
+    &lt;button onClick={() =&gt; sileo.success({ title: "Saved" })}&gt;
+      Save
+    &lt;/button&gt;
+  );
+}</code></pre></div>
+					<div class="nota aviso">
+						<code>destroy</code> uses <code>this</code>: call it on the toaster
+						(<code>() =&gt; toaster.destroy()</code>). Passing
+						<code>createToaster(…).destroy</code> bare as the cleanup function throws
+						on unmount.
+					</div>
+					<p>
+						In React 18 with <em>StrictMode</em> the effect mounts, cleans up and
+						mounts again in development. That is fine: the second
+						<code>createToaster()</code> creates a new one after the first
+						<code>destroy()</code>.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="svelte">
+					<h2 class="titulo">Svelte</h2>
+					<div class="codigo"><pre><code>&lt;script&gt;
+  import { onMount } from "svelte";
+  import { sileo, createToaster } from "sileojs";
+  import "sileojs/styles.css";
+
+  onMount(() =&gt; {
+    const toaster = createToaster({ position: "top-right" });
+    return () =&gt; toaster.destroy();
+  });
+&lt;/script&gt;
+
+&lt;button on:click={() =&gt; sileo.success({ title: "Saved" })}&gt;
+  Save
+&lt;/button&gt;</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="angular">
+					<h2 class="titulo">Angular</h2>
+					<p>The stylesheet goes in <code>angular.json</code>:</p>
+					<div class="codigo"><pre><code>"styles": ["node_modules/sileojs/src/sileo.css"]</code></pre></div>
+					<div class="codigo"><pre><code>import { Component, OnInit, OnDestroy } from "@angular/core";
+import { sileo, createToaster } from "sileojs";
+
+@Component({
+  selector: "app-root",
+  template: `&lt;button (click)="save()"&gt;Save&lt;/button&gt;`,
+})
+export class AppComponent implements OnInit, OnDestroy {
+  private toaster?: ReturnType&lt;typeof createToaster&gt;;
+
+  ngOnInit() {
+    this.toaster = createToaster({ position: "top-right" });
+  }
+
+  ngOnDestroy() {
+    this.toaster?.destroy();
+  }
+
+  save() {
+    sileo.success({ title: "Saved" });
+  }
+}</code></pre></div>
+					<div class="nota aviso">
+						<strong>TypeScript:</strong> the package does not ship
+						<code>.d.ts</code> files yet. Turn on <code>allowJs</code> or declare the
+						module: <code>declare module "sileojs";</code>
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="ssr">
+					<h2 class="titulo">SSR and no build</h2>
+					<p>
+						The core touches <code>document</code> as soon as you mount the toaster,
+						so in Next, Nuxt, SvelteKit or Astro mount it on the client only: inside
+						<code>useEffect</code>, <code>onMounted</code>, <code>onMount</code> or a
+						client <code>&lt;script&gt;</code>. Importing the module by itself runs
+						nothing.
+					</p>
+					<p>Without a bundler you can resolve the package name with an <em>import map</em>:</p>
+					<div class="codigo"><pre><code>&lt;script type="importmap"&gt;
+{ "imports": { "sileojs": "/vendor/sileojs/src/sileo.js" } }
+&lt;/script&gt;
+
+&lt;script type="module"&gt;
+  import { sileo, createToaster } from "sileojs";
+  createToaster();
+  window.sileo = sileo;   // if you want it truly global
+&lt;/script&gt;</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="api-sileo">
+					<h2 class="titulo">API · <code>sileo.*</code></h2>
+					<table>
+						<thead><tr><th>Method</th><th>Returns</th><th>What it does</th></tr></thead>
+						<tbody>
+							<tr><td><code>sileo.show(opts)</code></td><td><code>id</code></td><td>Uses <code>opts.type</code> (or <code>opts.state</code>) as the state</td></tr>
+							<tr><td><code>sileo.success(opts)</code></td><td><code>id</code></td><td rowspan="6">Shorthands per state</td></tr>
+							<tr><td><code>sileo.error(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.warning(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.info(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.action(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.loading(opts)</code></td><td><code>id</code></td></tr>
+							<tr><td><code>sileo.promise(p, opts)</code></td><td>the promise</td><td><code>loading</code> → <code>success</code> / <code>error</code> / <code>action</code></td></tr>
+							<tr><td><code>sileo.update(id, opts)</code></td><td>—</td><td>Changes a live toast: collapses it, swaps the content and carries on</td></tr>
+							<tr><td><code>sileo.dismiss(id)</code></td><td>—</td><td>Animated exit</td></tr>
+							<tr><td><code>sileo.clear(position?)</code></td><td>—</td><td>Clears everything, or just one position</td></tr>
+						</tbody>
+					</table>
+
+					<div class="nota">
+						The default <code>id</code> is <code>"sileo-default"</code>: repeated
+						calls <strong>replace</strong> the same toast instead of stacking. Pass
+						your own <code>id</code> to each one so they coexist.
+					</div>
+					<div class="probar">
+						<button type="button" data-run="mismo-id">No id (replaced)</button>
+						<button type="button" data-run="ids">Own id (stacked)</button>
+					</div>
+
+					<h3><code>sileo.promise()</code></h3>
+					<p>
+						Takes a promise or a function returning one. It shows the
+						<code>loading</code> state (no auto-close, never unfolds) and swaps it
+						when it settles. It returns the same promise, so you can keep chaining
+						—and catching— as usual.
+					</p>
+					<div class="codigo"><pre><code>sileo.promise(() =&gt; uploadFile(file), {
+  loading: { id: "upload", title: "Uploading", description: "Sending file…" },
+  success: (data) =&gt; ({ title: "Uploaded", description: data.name }),
+  error:   (err)  =&gt; ({ title: "Failed", description: String(err.message) }),
+
+  // optional: instead of success, an "action" state with a button
+  action: (data) =&gt; ({
+    title: "Report ready",
+    description: "You can download it now.",
+    button: { title: "Download", onClick: () =&gt; download(data.url) },
+  }),
+});</code></pre></div>
+					<div class="probar">
+						<button type="button" data-run="promise">Try a promise</button>
+						<button type="button" data-run="promise-fail">Make it fail</button>
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="opciones-toast">
+					<h2 class="titulo">Toast options</h2>
+					<table>
+						<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
+						<tbody>
+							<tr><td><code>id</code></td><td><code>string</code></td><td><code>"sileo-default"</code></td><td>Identity. Same id = same toast</td></tr>
+							<tr><td><code>title</code></td><td><code>string</code></td><td>the state</td><td>Text on the capsule</td></tr>
+							<tr><td><code>description</code></td><td><code>string | Node | {html}</code></td><td>—</td><td>The panel's message. Without it the toast never unfolds</td></tr>
+							<tr><td><code>type</code> / <code>state</code></td><td><code>success | loading | error | warning | info | action</code></td><td><code>"success"</code></td><td>Colour and icon</td></tr>
+							<tr><td><code>position</code></td><td>one of the 6</td><td>the toaster's</td><td>Can differ per toast</td></tr>
+							<tr><td><code>duration</code></td><td><code>number | null</code></td><td><code>6000</code></td><td>ms until it closes. <code>null</code> = it stays</td></tr>
+							<tr><td><code>icon</code></td><td><code>Node | {html} | string</code></td><td>the state's</td><td>A <code>string</code> is inserted as text; for an SVG use <code>{ html }</code></td></tr>
+							<tr><td><code>button</code></td><td><code>{ title, onClick }</code></td><td>—</td><td>Button inside the panel</td></tr>
+							<tr><td><code>styles</code></td><td><code>{ title, description, badge, button }</code></td><td>—</td><td>Your CSS classes for each part</td></tr>
+							<tr><td><code>className</code></td><td><code>string</code></td><td>—</td><td>Class for the toast root</td></tr>
+							<tr><td><code>fill</code></td><td><code>string</code></td><td>per theme</td><td>Colour of the capsule and the panel</td></tr>
+							<tr><td><code>roundness</code></td><td><code>number</code></td><td><code>16</code></td><td>Radius; also scales the gooey blur</td></tr>
+							<tr><td><code>autopilot</code></td><td><code>false | { expand, collapse }</code></td><td>150 / 4000 ms</td><td>See <a href="#autopilot">Autopilot</a></td></tr>
+						</tbody>
+					</table>
+
+					<h3>Rich content</h3>
+					<p>
+						<code>description</code> and <code>icon</code> take a DOM node or
+						<code>{ html }</code>. A <code>string</code> is always inserted as plain
+						text, so there is no injection risk when you render user data.
+					</p>
+					<div class="nota">
+						If you pass a <strong>node</strong>, it is yours: you can keep it, put
+						controls in it and change its content live. Since the toast reuses the
+						same node, touching it neither rebuilds the notification nor closes the
+						panel — unlike <code>sileo.update()</code>, which does rebuild it. The
+						demo uses this for a player with previous/next buttons that change the
+						text of that very notification.
+					</div>
+					<div class="codigo"><pre><code>sileo.info({
+  id: "thanks",
+  title: "Thanks",
+  icon: { html: '&lt;svg viewBox="0 0 24 24" …&gt;&lt;/svg&gt;' },
+  description: domNode,
+  styles: { title: "my-title", description: "my-text" },
+});</code></pre></div>
+					<div class="probar"><button type="button" data-run="icono">Try a custom icon</button></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="opciones-toaster">
+					<h2 class="titulo">Toaster options</h2>
+					<div class="codigo"><pre><code>const toaster = createToaster({
+  position: "top-right",     // the 6 positions
+  theme: "system",           // "light" | "dark" | "system"
+  offset: 24,                // number, string, or { top, right, bottom, left }
+  visibleToasts: 3,          // tabs visible in the row
+  options: {                 // defaults for every toast
+    duration: 4000,
+    roundness: 20,
+  },
+  container: document.body,  // where to mount the viewports
+});
+
+toaster.set({ position: "bottom-center" });   // reconfigure live
+toaster.destroy();                            // unmount and clean up</code></pre></div>
+
+					<table>
+						<thead><tr><th>Position</th><th>Where it shows up</th></tr></thead>
+						<tbody>
+							<tr><td><code>top-left</code> · <code>top-center</code> · <code>top-right</code></td><td>Top; the panel opens downwards</td></tr>
+							<tr><td><code>bottom-left</code> · <code>bottom-center</code> · <code>bottom-right</code></td><td>Bottom; the panel opens upwards</td></tr>
+						</tbody>
+					</table>
+					<div class="probar">
+						<button type="button" data-run="pos-tl">top-left</button>
+						<button type="button" data-run="pos-tc">top-center</button>
+						<button type="button" data-run="pos-br">bottom-right</button>
+						<button type="button" data-run="reset-pos">back to top-right</button>
+					</div>
+					<p>
+						Each position is its own stack, with its own tab row and its own focus.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="exports">
+					<h2 class="titulo">Exports</h2>
+					<table>
+						<thead><tr><th>Export</th><th>What it is</th></tr></thead>
+						<tbody>
+							<tr><td><code>sileo</code> <em>(also default)</em></td><td>The API to fire toasts</td></tr>
+							<tr><td><code>createToaster(opts)</code></td><td>Mounts the toaster (or reconfigures the existing one) and returns it</td></tr>
+							<tr><td><code>getToaster()</code></td><td>The mounted toaster, or <code>null</code></td></tr>
+							<tr><td><code>Toaster</code></td><td>The class, in case you want to instantiate it yourself</td></tr>
+							<tr><td><code>dismissToast(id)</code></td><td>Same as <code>sileo.dismiss</code></td></tr>
+							<tr><td><code>SILEO_POSITIONS</code> · <code>SILEO_STATES</code></td><td>The valid values, as arrays</td></tr>
+							<tr><td><code>STATE_ICON</code></td><td>The default icons (SVG strings) in case you want to reuse them</td></tr>
+						</tbody>
+					</table>
+					<p>And from <code>sileojs/vue</code>:</p>
+					<table>
+						<thead><tr><th>Export</th><th>What it is</th></tr></thead>
+						<tbody>
+							<tr><td><code>SileoPlugin</code> <em>(also default)</em></td><td>Mounts the toaster, registers the component and <code>$sileo</code></td></tr>
+							<tr><td><code>SileoToaster</code></td><td>The component</td></tr>
+							<tr><td><code>useSileo()</code></td><td>Returns <code>sileo</code>, for composables</td></tr>
+						</tbody>
+					</table>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="interaccion">
+					<h2 class="titulo">Interaction</h2>
+					<ul>
+						<li><strong>Pointer over</strong> → the panel opens and the auto-close of every toast is <strong>paused</strong>.</li>
+						<li><strong>Pointer to another tab</strong> → focus jumps to it: it widens, shows its title and opens its message.</li>
+						<li><strong>Drag</strong> vertically more than 30&nbsp;px → it is dismissed.</li>
+						<li><strong>Keyboard</strong> → every toast is focusable; on focus it behaves as if the pointer were over it.</li>
+						<li><code>prefers-reduced-motion</code> → all movement is turned off.</li>
+					</ul>
+					<p>
+						A toast in the <code>loading</code> state never unfolds and never
+						auto-closes: it is waiting for you to update it.
+					</p>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="fila-tabs">
+					<h2 class="titulo">The tab row</h2>
+					<p>
+						Several notifications in the same position do not stack as a list: they
+						form an overlapping row of tabs at the title's height. Only the focused
+						one drops its panel.
+					</p>
+					<ul>
+						<li>The tabs behind show only their icon, and the icon hugs the edge the tab peeks from —in the right-hand positions the row grows inwards and the left side peeks; in the left and centre ones, the right side. It holds both at rest and under the pointer.</li>
+						<li>Focus goes to the tab at the screen edge, the newest toast. A new toast takes focus.</li>
+						<li>When the pointer comes in the deck opens: <strong>every</strong> notification shows up —the cut at three is only for the resting state— and the front one opens its panel.</li>
+						<li><strong>Only the focused tab widens</strong>; the rest stay as their icon. But it always widens to the <em>same</em> width, that of the widest in the stack: what it grows offsets what it shifts, so the tab you are pointing at does not slip away from the pointer. If it took its own width, focusing a short-titled one would bounce focus to its neighbour.</li>
+						<li>The focused tab keeps its natural <code>z-index</code>: below the ones in front of it and above the ones behind, like a real tab. Put on top of everything, focusing a middle one would swallow the ones between it and the screen edge.</li>
+						<li>If the row does not fit, the focused tab's width is trimmed first and then how much each icon peeks: a tab outside the viewport would fall outside the hover area.</li>
+						<li>At rest 3 tabs are visible (<code>--sileo-stack-max</code> or <code>visibleToasts</code>) and, if there are more, a <strong><code>+</code></strong> shows up at the end of the deck: it only tells you there are others; the exact number shows when the row opens. The focused tab is never hidden, even as new toasts arrive.</li>
+					</ul>
+					<div class="probar">
+						<button type="button" data-run="stack">Stack 3</button>
+						<button type="button" data-run="stack5">Stack 5 (you'll see the +)</button>
+						<button type="button" data-run="clear">Clear</button>
+					</div>
+					<p>The positions come out of a single recurrence, from the edge inwards:</p>
+					<div class="codigo"><pre><code>x[0]     = 0
+x[i+1]   = x[i] + width(i) - tab-overlap
+
+// at rest
+width(i) = (i focused ? its capsule's width : the toast's height)
+
+// the focused one, always the same width
+width(i) = (i focused ? max(width of every capsule) : the toast's height)
+//          ^ bounded so the row fits in the viewport</code></pre></div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="autopilot">
+					<h2 class="titulo">Autopilot</h2>
+					<p>
+						A new toast opens by itself for a moment so the message can be read, and
+						closes a few seconds later. By default it opens at 150&nbsp;ms and closes
+						at 4&nbsp;s (always within its <code>duration</code>).
+					</p>
+					<div class="codigo"><pre><code>sileo.info({ title: "No autopilot", autopilot: false });
+
+sileo.info({
+  title: "My own pace",
+  description: "Opens right away and stays for 8 seconds.",
+  duration: 10000,
+  autopilot: { expand: 0, collapse: 8000 },
+});</code></pre></div>
+					<div class="nota">
+						While the pointer is inside the stack the autopilot <strong>stops
+						counting</strong>: it will not close the panel you are pointing at. When
+						the pointer leaves, everything goes back to rest.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="variables">
+					<h2 class="titulo">CSS variables</h2>
+					<p>Everything is tuned with custom properties; override them wherever you like.</p>
+					<div class="codigo"><pre><code>:root {
+  /* shape */
+  --sileo-width: 350px;
+  --sileo-height: 40px;
+  --sileo-roundness: 16px;
+  --sileo-gap: 12px;              /* distance from the screen edge */
+
+  /* movement */
+  --sileo-duration: 600ms;
+  --sileo-spring-easing: linear(…);   /* the spring, already linearised */
+  --sileo-ease-flat: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /* tab row */
+  --sileo-tab-overlap: 20px;      /* overlap at rest */
+  --sileo-tab-overlap-hot: 12px;  /* overlap with the pointer inside */
+  --sileo-stack-max: 3;           /* visible tabs */
+  --sileo-shadow: drop-shadow(0 2px 8px rgb(0 0 0 / 0.18));
+
+  /* colour */
+  --sileo-fill: #ffffff;
+  --sileo-state-success: oklch(0.723 0.219 142.136);
+  --sileo-state-error:   oklch(0.637 0.237 25.331);
+  --sileo-state-warning: oklch(0.795 0.184 86.047);
+  --sileo-state-info:    oklch(0.685 0.169 237.323);
+  --sileo-state-action:  oklch(0.623 0.214 259.815);
+  --sileo-state-loading: oklch(0.556 0 0);
+}</code></pre></div>
+					<div class="nota">
+						The shadow is what separates a tab from the one behind it, so it depends
+						on the fill: with light capsules a dark shadow is enough, but with
+						<code>theme: "light"</code> the capsule is dark and a black shadow over
+						another dark capsule separates nothing — there it also gets a light rim.
+						If you change <code>--sileo-fill</code> by hand, adjust
+						<code>--sileo-shadow</code> too.
+					</div>
+
+					<div class="nota">
+						<code>--sileo-height</code>, <code>--sileo-tab-overlap</code> and
+						<code>--sileo-stack-max</code> are declared with <code>@property</code>.
+						The JS reads them already resolved to px, so you can write them in any
+						unit and the CSS stays the single source of the measurements.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="temas">
+					<h2 class="titulo">Themes</h2>
+					<p>
+						With <code>theme</code> the toaster picks the fill: on a light theme the
+						capsule is dark, and the other way round. <code>"system"</code> follows
+						<code>prefers-color-scheme</code> and reacts to changes.
+					</p>
+					<div class="codigo"><pre><code>createToaster({ theme: "system" });   // "light" | "dark" | "system"</code></pre></div>
+					<p>
+						If you pass no <code>theme</code>, the CSS rules: the fill is
+						<code>--sileo-fill</code>. And you can always pin it per toast with
+						<code>fill</code>.
+					</p>
+					<div class="probar">
+						<button type="button" data-run="tema-claro">theme: light</button>
+						<button type="button" data-run="tema-oscuro">theme: dark</button>
+						<button type="button" data-run="tema-sistema">theme: system</button>
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="clases">
+					<h2 class="titulo">Your own classes</h2>
+					<p>
+						With <code>styles</code> (per toast) or <code>options.styles</code> (for
+						all of them) you put your classes on each part. Handy with Tailwind or
+						CSS modules.
+					</p>
+					<div class="codigo"><pre><code>createToaster({
+  options: {
+    styles: { description: "text-sm text-slate-500" },
+  },
+});
+
+sileo.success({
+  title: "Saved",
+  description: "All done.",
+  className: "my-toast",
+  styles: { title: "font-bold", badge: "ring-1" },
+});</code></pre></div>
+					<p>
+						If you would rather target the DOM, every part has its attribute:
+						<code>[data-sileo-toast]</code>, <code>[data-sileo-header]</code>,
+						<code>[data-sileo-badge]</code>, <code>[data-sileo-title]</code>,
+						<code>[data-sileo-description]</code>, <code>[data-sileo-button]</code>.
+					</p>
+					<div class="nota aviso">
+						If your stylesheet has loose rules like <code>button:hover { … }</code>,
+						bear in mind the toast root <em>is</em> a <code>&lt;button&gt;</code>.
+						Sileo defends itself by raising the specificity of its own styles, but
+						get into the habit of scoping yours.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="accesibilidad">
+					<h2 class="titulo">Accessibility</h2>
+					<ul>
+						<li>Each position is a <code>&lt;section role="status" aria-live="polite"&gt;</code>: screen readers announce the toast as it appears, without interrupting.</li>
+						<li>The root of each toast is a focusable <code>&lt;button&gt;</code>, with <code>aria-label</code> equal to the title.</li>
+						<li>Receiving keyboard focus opens the panel, just like the pointer does.</li>
+						<li>Tabs beyond the visible maximum are hidden with <code>visibility: hidden</code>, so they leave the tab order.</li>
+						<li>With <code>prefers-reduced-motion: reduce</code> not a single animation or transition is left.</li>
+					</ul>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="compatibilidad">
+					<h2 class="titulo">Browser support</h2>
+					<p>
+						Chrome/Edge&nbsp;113+, Safari&nbsp;16.4+ and Firefox&nbsp;128+. No build
+						step and no dependencies.
+					</p>
+					<table>
+						<thead><tr><th>Relies on</th><th>What for</th></tr></thead>
+						<tbody>
+							<tr><td><code>linear()</code></td><td>The spring, as a native easing</td></tr>
+							<tr><td><code>@property</code></td><td>So the JS reads the measurements already resolved</td></tr>
+							<tr><td><code>translate</code> / <code>scale</code></td><td>Placing the tabs without touching <code>transform</code></td></tr>
+							<tr><td><code>oklch()</code>, <code>color-mix()</code></td><td>The state colours and their backgrounds</td></tr>
+							<tr><td>SVG filters</td><td>The gooey morphing</td></tr>
+							<tr><td><code>ResizeObserver</code></td><td>Measuring capsule and panel</td></tr>
+						</tbody>
+					</table>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="por-dentro">
+					<h2 class="titulo">How it works</h2>
+					<p>The merging effect is two rectangles and an SVG filter:</p>
+					<ul>
+						<li>The <strong>capsule</strong> and the <strong>panel</strong> are two <code>div</code>s with <code>border-radius</code>, inside a filtered layer.</li>
+						<li>The filter blurs and then raises the alpha contrast (<code>×20 −10</code>): that turns the blur into a hard edge, and that is where two nearby shapes <strong>merge</strong>.</li>
+						<li>The bridge's colour does not come from the blur —in unpremultiplied sRGB, transparent is black and it would come out grey—: it is flooded with <code>--sileo-fill</code> and clipped by the thresholded alpha.</li>
+						<li>On opening, the capsule grows towards the panel to force the overlap.</li>
+						<li>The bottom positions reuse the same geometry with <code>scaleY(-1)</code>.</li>
+						<li>The shadow goes after the filter in the chain, over the already merged silhouette.</li>
+					</ul>
+					<p>
+						The JS only publishes measurements —<code>--_pw</code> (capsule width),
+						<code>--_ch</code> (content height), <code>--_tx</code> (place in the
+						row)— and the CSS derives all the geometry from them with
+						<code>calc()</code> and <code>max()</code>.
+					</p>
+				</section>
+
+				<footer>
+					<p>
+						MIT · A rewrite of
+						<a href="https://sileo.aaryan.design/">sileo.aaryan.design</a> by Aaryan
+						Kapoor, rebuilt as a vanilla core.
+						<a href="../demo/index.html">Demo</a> ·
+						<a href="../demo/spec.html">Core tests</a> ·
+						<a href="../demo/spec-vue.html">Vue tests</a>
+					</p>
+				</footer>
+			</main>
+		</div>
+
+		<script type="module" src="./docs.js"></script>
+	</body>
+</html>

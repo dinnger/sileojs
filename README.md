@@ -6,7 +6,7 @@
 
 ![til](./intro.gif)
 
-**[Documentación](https://dinnger.github.io/sileojs/docs/)** · **[Demo](https://dinnger.github.io/sileojs/demo/)** · **[npm](https://www.npmjs.com/package/sileojs)** · **[GitHub](https://github.com/dinnger/sileojs)**
+**[Documentación](https://dinnger.github.io/sileojs/docs/)** · **[Docs in English](https://dinnger.github.io/sileojs/docs/en.html)** · **[Demo](https://dinnger.github.io/sileojs/demo/)** · **[npm](https://www.npmjs.com/package/sileojs)** · **[GitHub](https://github.com/dinnger/sileojs)**
 
 Réplica de [sileo.aaryan.design](https://sileo.aaryan.design/) — toast con morphing
 gooey y spring physics — reescrita como **core vanilla, cero dependencias**, que
@@ -22,6 +22,9 @@ src/sileo.css   motor de animación (spring, morph, gooey, temas)
 src/sileo.js    core vanilla — store + renderer + API
 src/vue.js      adaptador Vue 3 (componente, plugin, composable)
 docs/index.html documentación completa (panel lateral, ejemplos vivos)
+docs/en.html    la misma, en inglés — la página elige idioma según el navegador
+docs/docs.css   hoja y guion compartidos por los dos idiomas
+docs/docs.js
 demo/index.html playground sin build
 ```
 

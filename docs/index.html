@@ -5,203 +5,20 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<title>Sileo · Documentación</title>
 		<link rel="stylesheet" href="../src/sileo.css" />
-		<style>
-			* { box-sizing: border-box; }
-
-			:root {
-				--fondo: #0b0b0c;
-				--fondo-2: #0e0e11;
-				--linea: #1e1e23;
-				--texto: #ededed;
-				--apagado: #8b8b8f;
-				--tenue: #6c6c70;
-				--acento: #6aa8ff;
-			}
-
-			body {
-				margin: 0;
-				background: var(--fondo);
-				color: var(--texto);
-				font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-				font-size: 15px;
-				line-height: 1.6;
-			}
-
-			.saltar {
-				position: absolute; left: -9999px;
-				background: var(--fondo-2); color: var(--texto);
-				padding: 0.6rem 1rem; border-radius: 0.5rem; z-index: 100;
-			}
-			.saltar:focus { left: 1rem; top: 1rem; }
-
-			/* --------------------------------- Layout -------------------------------- */
-
-			.layout {
-				display: grid;
-				grid-template-columns: 260px minmax(0, 1fr);
-				gap: 2.5rem;
-				max-width: 1120px;
-				margin: 0 auto;
-				padding: 0 1.5rem;
-			}
-
-			.lateral {
-				position: sticky;
-				top: 0;
-				align-self: start;
-				height: 100vh;
-				overflow-y: auto;
-				padding: 2rem 0 3rem;
-				border-right: 1px solid var(--linea);
-				scrollbar-width: thin;
-			}
-
-			main { padding: 2rem 0 6rem; min-width: 0; }
-
-			/* --------------------------------- Nav ---------------------------------- */
-
-			.marca {
-				font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em;
-				margin: 0 0 0.15rem;
-			}
-			.marca span {
-				font-size: 0.7rem; font-weight: 400; color: var(--tenue);
-				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-			}
-			.lateral p.sub { margin: 0 0 1.5rem; font-size: 0.78rem; color: var(--tenue); }
-
-			.lateral h2 {
-				font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.09em;
-				color: var(--tenue); margin: 1.4rem 0 0.4rem; font-weight: 600;
-			}
-			.lateral nav a {
-				display: block; padding: 0.28rem 0 0.28rem 0.7rem;
-				margin-left: -1px;
-				border-left: 2px solid transparent;
-				color: var(--apagado); text-decoration: none; font-size: 0.85rem;
-				transition: color 120ms ease, border-color 120ms ease;
-			}
-			.lateral nav a:hover { color: var(--texto); }
-			.lateral nav a.activo {
-				color: var(--texto); border-left-color: var(--acento); font-weight: 500;
-			}
-			.lateral nav a:focus-visible { outline: 2px solid var(--acento); outline-offset: 2px; }
-
-			/* ------------------------------- Contenido ------------------------------- */
-
-			section { scroll-margin-top: 1.5rem; }
-			section + section { margin-top: 3rem; }
-
-			h1 { font-size: 1.9rem; letter-spacing: -0.02em; margin: 0 0 0.5rem; }
-			h2.titulo {
-				font-size: 1.25rem; letter-spacing: -0.01em; margin: 0 0 0.75rem;
-				padding-bottom: 0.5rem; border-bottom: 1px solid var(--linea);
-			}
-			h3 { font-size: 0.95rem; margin: 1.6rem 0 0.5rem; }
-			p { margin: 0 0 0.9rem; color: #c9c9cf; }
-			p.lead { font-size: 1rem; color: var(--apagado); }
-			ul { margin: 0 0 0.9rem; padding-left: 1.1rem; color: #c9c9cf; }
-			li { margin: 0.25rem 0; }
-			a { color: var(--acento); }
-
-			code {
-				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 0.84em;
-				background: #16161a; border: 1px solid var(--linea);
-				border-radius: 0.3rem; padding: 0.08em 0.35em; color: #d5d5db;
-			}
-
-			.codigo { position: relative; margin: 0 0 1rem; }
-			.codigo pre {
-				margin: 0; padding: 0.9rem 1rem;
-				border: 1px solid var(--linea); border-radius: 0.75rem;
-				background: var(--fondo-2); overflow-x: auto; color: #c9c9cf;
-				font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-				font-size: 0.8rem; line-height: 1.6;
-			}
-			.codigo pre code { background: none; border: 0; padding: 0; font-size: inherit; }
-			.codigo .copiar {
-				position: absolute; top: 0.5rem; right: 0.5rem;
-				appearance: none; cursor: pointer; font: inherit; font-size: 0.7rem;
-				padding: 0.2rem 0.5rem; border-radius: 0.4rem;
-				border: 1px solid var(--linea); background: #16161a; color: var(--apagado);
-				opacity: 0; transition: opacity 120ms ease, color 120ms ease;
-			}
-			.codigo:hover .copiar, .codigo .copiar:focus-visible { opacity: 1; }
-			.codigo .copiar:hover { color: var(--texto); }
-
-			.nota {
-				border-left: 2px solid var(--acento);
-				background: #101319; border-radius: 0 0.5rem 0.5rem 0;
-				padding: 0.75rem 1rem; margin: 0 0 1rem;
-				font-size: 0.88rem; color: #b9c4d4;
-			}
-			.nota strong { color: var(--texto); }
-			.nota.aviso { border-left-color: #d9a441; background: #191509; color: #d3c4a4; }
-
-			table {
-				width: 100%; border-collapse: collapse; margin: 0 0 1rem;
-				font-size: 0.84rem; display: block; overflow-x: auto;
-			}
-			th, td {
-				text-align: left; padding: 0.5rem 0.7rem;
-				border-bottom: 1px solid var(--linea); vertical-align: top;
-			}
-			th { color: var(--tenue); font-weight: 600; text-transform: uppercase; font-size: 0.68rem; letter-spacing: 0.06em; }
-			td { color: #c9c9cf; }
-			td code { white-space: nowrap; }
-
-			.probar { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0 0 1rem; }
-			.probar button {
-				appearance: none; cursor: pointer; font: inherit; font-size: 0.78rem;
-				padding: 0.35rem 0.75rem; border-radius: 9999px;
-				border: 1px solid #26262a; background: #16161a; color: var(--texto);
-				transition: background 140ms ease, border-color 140ms ease;
-			}
-			.probar button:hover { background: #1e1e23; border-color: #34343a; }
-
-			footer {
-				margin-top: 4rem; padding-top: 1.5rem; border-top: 1px solid var(--linea);
-				color: var(--tenue); font-size: 0.82rem;
-			}
-
-			.enlaces {
-				display: flex; flex-wrap: wrap; gap: 0.9rem;
-				margin: 1.6rem 0 0; padding-top: 1rem;
-				border-top: 1px solid var(--linea);
-				font-size: 0.82rem;
-			}
-			.enlaces a { text-decoration: none; }
-			.enlaces a:hover { text-decoration: underline; }
-
-			#menu > summary { display: none; }
-
-			@media (max-width: 900px) {
-				#menu > summary {
-					display: block; cursor: pointer; list-style: none;
-					font-size: 0.8rem; color: var(--apagado);
-					padding: 0.5rem 0.75rem; margin-bottom: 0.25rem;
-					border: 1px solid var(--linea); border-radius: 0.5rem;
-					background: var(--fondo-2);
+		<link rel="stylesheet" href="./docs.css" />
+		<link rel="alternate" hreflang="en" href="./en.html" />
+		<link rel="alternate" hreflang="es" href="./index.html" />
+		<script>
+			/* Idioma: manda lo que hayas elegido; si no, el del navegador. Va aquí,
+			   antes de pintar, para no enseñar la página equivocada un instante. */
+			try {
+				const elegido = localStorage.getItem("sileo-docs-lang");
+				const nav = (navigator.language || "es").slice(0, 2).toLowerCase();
+				if ((elegido || (nav === "es" ? "es" : "en")) !== "es") {
+					location.replace("./en.html" + location.hash);
 				}
-				#menu > summary::-webkit-details-marker { display: none; }
-				#menu > summary::after { content: " ▾"; color: var(--tenue); }
-				#menu[open] > summary::after { content: " ▴"; }
-			}
-
-			@media (max-width: 900px) {
-				.layout { grid-template-columns: 1fr; gap: 0; }
-				.lateral {
-					position: static; height: auto; border-right: 0;
-					border-bottom: 1px solid var(--linea); padding: 1.5rem 0 1rem;
-				}
-				.lateral nav { display: flex; flex-wrap: wrap; gap: 0.1rem 0.9rem; }
-				.lateral nav a { border-left: 0; padding: 0.2rem 0; }
-				.lateral nav a.activo { border-left: 0; text-decoration: underline; }
-				.lateral h2 { width: 100%; margin: 0.9rem 0 0.2rem; }
-				main { padding-top: 1.5rem; }
-			}
-		</style>
+			} catch {}
+		</script>
 	</head>
 
 	<body>
@@ -211,6 +28,11 @@
 			<aside class="lateral">
 				<p class="marca">Sileo <span>v0.1.0</span></p>
 				<p class="sub">Toast con morphing gooey y spring physics.</p>
+
+				<p class="idioma">
+					<a href="./index.html" data-lang="es" aria-current="page">ES</a>
+					<a href="./en.html" data-lang="en">EN</a>
+				</p>
 
 				<details id="menu" open>
 					<summary>Secciones</summary>
@@ -984,153 +806,6 @@ sileo.success({
 			</main>
 		</div>
 
-		<script type="module">
-			import { sileo, createToaster } from "../src/sileo.js";
-
-			const toaster = createToaster({ position: "top-right", theme: "system" });
-
-			/* ------------------------------ Ejemplos vivos ---------------------------- */
-
-			const wait = (ms, ok = true) =>
-				new Promise((res, rej) =>
-					setTimeout(ok ? res : rej, ms, ok ? { nombre: "reporte.pdf" } : new Error("sin conexión")),
-				);
-
-			const corazon =
-				'<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>';
-
-			const apilar = (n) => {
-				const kinds = [sileo.success, sileo.info, sileo.warning, sileo.error, sileo.action];
-				const nombres = ["Uno", "Dos", "Tres", "Cuatro", "Cinco"];
-				for (let i = 0; i < n; i++) {
-					setTimeout(
-						() =>
-							kinds[i]({
-								id: `demo-${i}`,
-								title: nombres[i],
-								description: `Mensaje de la notificación ${nombres[i].toLowerCase()}.`,
-							}),
-						i * 280,
-					);
-				}
-			};
-
-			const ejemplos = {
-				success: () =>
-					sileo.success({ id: "d1", title: "Guardado", description: "Tus cambios se sincronizaron." }),
-				quick: () =>
-					sileo.success({
-						id: "quick",
-						title: "Guardado",
-						description: "Tus cambios se sincronizaron con el servidor.",
-					}),
-				"mismo-id": () =>
-					sileo.info({ title: "Sin id", description: `Reemplaza al anterior · ${new Date().toLocaleTimeString()}` }),
-				ids: () => apilar(3),
-				stack: () => apilar(3),
-				stack5: () => apilar(5),
-				clear: () => sileo.clear(),
-				icono: () =>
-					sileo.info({
-						id: "icono",
-						title: "Gracias",
-						icon: { html: corazon },
-						description: "Icono propio pasado como { html }.",
-					}),
-				promise: () =>
-					sileo
-						.promise(() => wait(1600), {
-							loading: { id: "pr", title: "Subiendo", description: "Enviando archivo…" },
-							success: (data) => ({ title: "Subido", description: data.nombre }),
-							error: () => ({ title: "Falló" }),
-						})
-						.catch(() => {}),
-				"promise-fail": () =>
-					sileo
-						.promise(() => wait(1400, false), {
-							loading: { id: "pf", title: "Guardando", description: "Un momento…" },
-							success: () => ({ title: "Guardado" }),
-							error: (err) => ({ title: "Error", description: String(err.message) }),
-						})
-						.catch(() => {}),
-				"pos-tl": () => sileo.success({ id: "p1", title: "top-left", position: "top-left", description: "Aquí." }),
-				"pos-tc": () => sileo.info({ id: "p2", title: "top-center", position: "top-center", description: "Aquí." }),
-				"pos-br": () => sileo.warning({ id: "p3", title: "bottom-right", position: "bottom-right", description: "Aquí." }),
-				"reset-pos": () => {
-					sileo.clear();
-					toaster.set({ position: "top-right" });
-				},
-				"tema-claro": () => {
-					toaster.set({ theme: "light" });
-					sileo.success({ id: "t", title: "theme: light", description: "Cápsula oscura." });
-				},
-				"tema-oscuro": () => {
-					toaster.set({ theme: "dark" });
-					sileo.success({ id: "t", title: "theme: dark", description: "Cápsula clara." });
-				},
-				"tema-sistema": () => {
-					toaster.set({ theme: "system" });
-					sileo.success({ id: "t", title: "theme: system", description: "Sigue al sistema." });
-				},
-			};
-
-			for (const btn of document.querySelectorAll("[data-run]")) {
-				btn.addEventListener("click", () => ejemplos[btn.dataset.run]?.());
-			}
-
-			/* ------------------------------ Botón copiar ------------------------------ */
-
-			for (const bloque of document.querySelectorAll(".codigo")) {
-				const btn = document.createElement("button");
-				btn.type = "button";
-				btn.className = "copiar";
-				btn.textContent = "copiar";
-				btn.addEventListener("click", async () => {
-					try {
-						await navigator.clipboard.writeText(bloque.querySelector("code").textContent);
-						btn.textContent = "copiado";
-					} catch {
-						btn.textContent = "no se pudo";
-					}
-					setTimeout(() => (btn.textContent = "copiar"), 1400);
-				});
-				bloque.appendChild(btn);
-			}
-
-			/* --------------------------- Menú en pantallas pequeñas ------------------- */
-
-			const menu = document.getElementById("menu");
-			const estrecho = window.matchMedia("(max-width: 900px)");
-			const sincronizarMenu = () => (menu.open = !estrecho.matches);
-			estrecho.addEventListener("change", sincronizarMenu);
-			sincronizarMenu();
-			menu.addEventListener("click", (e) => {
-				if (estrecho.matches && e.target.closest("nav a")) menu.open = false;
-			});
-
-			/* ------------------------- Resaltar sección actual ------------------------ */
-
-			const enlaces = new Map(
-				[...document.querySelectorAll(".lateral nav a")].map((a) => [a.getAttribute("href").slice(1), a]),
-			);
-			let actual = null;
-			const marcar = (id) => {
-				if (id === actual) return;
-				actual = id;
-				for (const [key, a] of enlaces) a.classList.toggle("activo", key === id);
-			};
-
-			const observador = new IntersectionObserver(
-				(entries) => {
-					// la sección visible más alta gana
-					const visibles = entries
-						.filter((e) => e.isIntersecting)
-						.sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-					if (visibles[0]) marcar(visibles[0].target.id);
-				},
-				{ rootMargin: "0px 0px -70% 0px", threshold: 0 },
-			);
-			for (const s of document.querySelectorAll("main section[id]")) observador.observe(s);
-		</script>
+		<script type="module" src="./docs.js"></script>
 	</body>
 </html>
