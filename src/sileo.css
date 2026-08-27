@@ -102,6 +102,22 @@
 	transition: height var(--sileo-duration) var(--sileo-spring-easing);
 }
 
+/*
+ * Blindaje del viewport. El JS le escribe data-theme, y muchas hojas del host
+ * (Tailwind v4, daisyUI y compania) traen una regla del tipo
+ *   :root, [data-theme] { background-color: var(--root-bg); color: ... }
+ * que engancha ese atributo y pinta un rectangulo opaco de 350px sobre la
+ * pagina. El escenario del stack siempre es transparente: el color lo ponen las
+ * capsulas via --sileo-fill. Selector duplicado para subir la especificidad a
+ * 0,2,0 y ganarle a [data-theme] (0,1,0) venga en el orden que venga.
+ * El `color: inherit` evita lo mismo con el texto: la fila hereda del contexto
+ * donde vive el viewport, no del tema raiz del host.
+ */
+[data-sileo-viewport][data-sileo-viewport] {
+	background: transparent;
+	color: inherit;
+}
+
 /* Con el cursor dentro la baraja se abre un poco: las tabs de atras dejan de
    estar tucked y se pueden apuntar. */
 [data-sileo-viewport][data-hot="true"] {
