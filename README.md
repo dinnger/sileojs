@@ -284,6 +284,16 @@ removes the previous ones, so swapping them live leaves nothing behind.
 - **Drag** vertically > 30px → dismisses.
 - `prefers-reduced-motion` turns off all movement.
 
+The cursor counts even when it does not move: if the toast is **born under** the
+pointer the browser fires no `pointerenter`, so Sileo checks where the pointer
+is on mount and on every relayout. The panel stays open and the auto-dismiss
+paused until the cursor **leaves**, and only then does the clock start again.
+
+Calling the same notification twice never gets swallowed: the toast comes back
+to the front of the row (even if it was buried under the stack cut, or halfway
+out), the header replays its entrance even when the text is identical, and the
+timer starts from zero.
+
 ## The overlapping tab row
 
 When several toasts share a position they do not stack as a list: they form an

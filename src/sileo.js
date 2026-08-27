@@ -121,6 +121,68 @@ const pillAlign = (pos) =>
 
 const expandDir = (pos) => (pos.startsWith("top") ? "bottom" : "top");
 
+/* -------------------------------- Puntero --------------------------------- */
+/*
+ * `pointerenter` solo se emite cuando el puntero SE MUEVE: si el toast nace
+ * justo debajo del cursor, el navegador no dispara nada y el stack se queda
+ * frio, asi que el autopilot lo colapsa y el auto-dismiss lo cierra aunque lo
+ * estes senalando. Por eso se guarda la ultima posicion conocida del puntero:
+ * al montar o recolocar, cada viewport comprueba si le cae encima.
+ *
+ * Solo cuenta el puntero fino (raton/lapiz). En tactil no hay hover que
+ * mantener, y la posicion del ultimo toque no debe congelar nada.
+ */
+const pointer = { x: 0, y: 0, known: false };
+
+let pointerBound = false;
+
+function trackPointer() {
+	if (pointerBound || typeof document === "undefined") return;
+	pointerBound = true;
+
+	const seen = (e) => {
+		if (e.pointerType === "touch") {
+			pointer.known = false;
+			return;
+		}
+		pointer.x = e.clientX;
+		pointer.y = e.clientY;
+		pointer.known = true;
+	};
+	// En captura y pasivos: esto solo mira, nunca estorba al resto de la pagina.
+	const opts = { passive: true, capture: true };
+	document.addEventListener("pointermove", seen, opts);
+	document.addEventListener("pointerdown", seen, opts);
+	// El puntero se fue de la ventana (o la ventana perdio el foco): lo guardado
+	// ya no dice donde esta, y dejarlo valido congelaria un stack para siempre.
+	const lost = () => {
+		pointer.known = false;
+	};
+	document.addEventListener("pointerleave", (e) => {
+		if (!e.relatedTarget) lost();
+	}, opts);
+	window.addEventListener("blur", lost, { passive: true });
+}
+
+const finePointer = () =>
+	typeof window === "undefined" ||
+	!window.matchMedia ||
+	window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+/** Si el puntero esta ahora mismo dentro de este nodo. */
+function pointerInside(node) {
+	if (!node) return false;
+	// `:hover` es la respuesta del propio navegador: si ya la tiene, sobra mirar.
+	if (node.matches?.(":hover")) return true;
+	if (!pointer.known || !finePointer()) return false;
+	// elementFromPoint y no el rect: hace el mismo hit-test que el navegador, asi
+	// que respeta pointer-events y lo que haya por encima. Si algo tapa el
+	// viewport, el puntero no esta "dentro" y no hay que calentar nada (no
+	// llegaria despues ningun pointerleave que lo enfriara).
+	const hit = document.elementFromPoint(pointer.x, pointer.y);
+	return Boolean(hit) && (hit === node || node.contains(hit));
+}
+
 /* ------------------------------ Estilos de usuario ------------------------ */
 
 /**
@@ -345,7 +407,11 @@ class SileoToast {
 		this._own("--sileo-goo", `url(#${this.goo.id})`);
 		this.setFill(item.fill);
 
-		this._header(state, title, item);
+		// Una llamada repetida no cambia el texto, pero tiene que notarse: la
+		// cabecera vuelve a hacer su entrada (fade + blur) aunque diga lo mismo.
+		const again = this.repeat;
+		this.repeat = false;
+		this._header(state, title, item, again);
 		this._content(item, state);
 		this.applyStyles(item.styles, item.className);
 
@@ -355,9 +421,9 @@ class SileoToast {
 	}
 
 	/** Header con crossfade+blur entre estados (dos capas, animacion CSS). */
-	_header(state, title, item) {
+	_header(state, title, item, force) {
 		const key = `${state}-${title}`;
-		if (this.headerKey === key) {
+		if (!force && this.headerKey === key) {
 			// mismo estado/titulo: solo refrescar icono si cambio
 			this.headerKey = key;
 			return;
@@ -457,6 +523,7 @@ class SileoToast {
 	 */
 	update(item) {
 		clearTimeout(this.timers.swap);
+		this.repeat = true;
 		if (this.expanded) {
 			this.pending = item;
 			this.close();
@@ -639,13 +706,17 @@ const generateId = () =>
 	`${++idCounter}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 
 const dismissToast = (id) => {
-	const item = store.toasts.find((t) => t.id === id);
-	if (!item || item.exiting) return;
+	const item = store.toasts.find((t) => t.id === id && !t.exiting);
+	if (!item) return;
+	const inst = item.instanceId;
 	store.update((prev) =>
-		prev.map((t) => (t.id === id ? { ...t, exiting: true } : t)),
+		prev.map((t) => (t.instanceId === inst ? { ...t, exiting: true } : t)),
 	);
+	// Se retira por instancia, no por id: si mientras salia se volvio a lanzar
+	// ese mismo id, lo que hay ahora es otra notificacion y no se la puede
+	// llevar por delante.
 	setTimeout(
-		() => store.update((prev) => prev.filter((t) => t.id !== id)),
+		() => store.update((prev) => prev.filter((t) => t.instanceId !== inst)),
 		EXIT_DURATION,
 	);
 };
@@ -687,17 +758,22 @@ const buildItem = (merged, id, prev) => {
 	};
 };
 
+/*
+ * Cada llamada tiene que verse. Con el mismo id se reemplaza el toast (eso no
+ * cambia), pero el item se lleva al final de la lista, que es el frente de la
+ * fila: si estaba enterrado bajo el corte del stack, o saliendo, vuelve a
+ * asomar. Y aunque el texto sea identico, la cabecera repite su entrada para
+ * que se vea que ha vuelto a pasar algo.
+ */
 const createToast = (options) => {
 	const merged = mergeOptions(options);
 	const id = merged.id ?? "sileo-default";
 	const prev = store.toasts.filter((t) => !t.exiting).find((t) => t.id === id);
 	const item = buildItem(merged, id, prev);
 
-	if (prev) {
-		store.update((p) => p.map((t) => (t.id === id ? item : t)));
-	} else {
-		store.update((p) => [...p.filter((t) => t.id !== id), item]);
-	}
+	// Fuera cualquier rastro de ese id (incluido el que estuviera saliendo) y el
+	// nuevo al final: el mas nuevo manda.
+	store.update((p) => [...p.filter((t) => t.id !== id), item]);
 	return { id, duration: merged.duration ?? DEFAULT_TOAST_DURATION };
 };
 
@@ -798,6 +874,7 @@ class Toaster {
 		this.stacks = new Map(); // { el, hot, focusedId, order, metrics, laying }
 
 		this._watchTheme();
+		trackPointer();
 
 		this.listener = (list) => this._render(list);
 		store.listeners.add(this.listener);
@@ -909,6 +986,14 @@ class Toaster {
 			};
 
 			let toast = this.toasts.get(item.id);
+			// Se volvio a lanzar un id que estaba saliendo: ese toast ya esta
+			// desvaneciendose y no puede quedarse con la llamada nueva, asi que se
+			// rehace desde cero y entra como lo que es, una notificacion nueva.
+			if (toast && toast.exiting && !item.exiting) {
+				toast.destroy();
+				this.toasts.delete(item.id);
+				toast = undefined;
+			}
 			// La posicion cambio (del toast o del toaster): se rehace en el
 			// viewport nuevo, que es quien manda la geometria y la direccion.
 			if (toast && toast.pos !== pos) {
@@ -955,6 +1040,26 @@ class Toaster {
 		this._order(list);
 		this._syncTimers(list);
 		this._gcViewports();
+		this._checkPointer();
+	}
+
+	/**
+	 * Un toast que nace (o crece) debajo del cursor no recibe `pointerenter`,
+	 * asi que el stack se calienta aqui: mientras el puntero este dentro, el
+	 * panel se queda abierto y el auto-dismiss en pausa, igual que si hubiera
+	 * entrado. Al salir sale el `pointerleave` de siempre y el tiempo sigue.
+	 */
+	_checkPointer() {
+		cancelAnimationFrame(this.pointerRaf);
+		if (typeof requestAnimationFrame !== "function") return;
+		// Un frame despues: el viewport necesita su alto nuevo (--_sh) para que el
+		// rect que se mide sea el que el usuario tiene delante.
+		this.pointerRaf = requestAnimationFrame(() => {
+			for (const [pos, vp] of this.viewports) {
+				if (this.stacks.get(pos)?.hot) continue;
+				if (pointerInside(vp)) this._setHot(pos, true);
+			}
+		});
 	}
 
 	/* ---------------------------------- Stack --------------------------------- */
@@ -1091,6 +1196,7 @@ class Toaster {
 		else st.chip.removeAttribute("data-visible");
 
 		st.el.style.setProperty("--_sh", `${height}px`);
+		if (!st.hot) this._checkPointer();
 	}
 
 	/** Solo la tab enfocada puede expandirse; si el stack esta caliente, se abre. */
@@ -1296,6 +1402,7 @@ class Toaster {
 
 	destroy() {
 		store.listeners.delete(this.listener);
+		cancelAnimationFrame(this.pointerRaf);
 		this.mq?.removeEventListener("change", this.onMq);
 		this._clearTimers();
 		for (const toast of this.toasts.values()) toast.destroy();

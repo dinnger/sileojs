@@ -397,6 +397,78 @@ ok("posicion dinamica: el resto sigue al toaster", t.toasts.get("sty").pos === P
 sileo.clear();
 await sleep(900);
 
+
+// ------------------------------------ el puntero ya estaba donde nace el toast
+sileo.clear();
+await sleep(900);
+t.set({ position: POS });
+// se mide donde cae el viewport y luego se deja el puntero quieto ahi dentro
+sileo.info({ id: "medir", title: "Medir", description: "Solo para medir.", duration: null, autopilot: false });
+await sleep(300);
+const caja = st().el.getBoundingClientRect();
+sileo.clear();
+await sleep(900);
+
+const punteroEn = (x, y) =>
+  document.dispatchEvent(new PointerEvent("pointermove", { clientX: x, clientY: y, bubbles: true }));
+
+punteroEn(caja.left + caja.width - 20, caja.top + 10);
+sileo.success({ id: "bajo", title: "Bajo el cursor", description: "El puntero ya estaba aqui." });
+await sleep(400);
+ok("puntero quieto: el stack se calienta solo", st().hot === true, String(st().hot));
+ok("puntero quieto: el panel se queda abierto", node("bajo").dataset.expanded === "true",
+   node("bajo").dataset.expanded);
+ok("puntero quieto: el auto-dismiss esta en pausa", t.timers.size === 0, String(t.timers.size));
+
+// pasado el autoCollapse (4s) tiene que seguir abierta y viva
+await sleep(4200);
+ok("puntero quieto: sigue abierta pasado el autopilot", node("bajo")?.dataset.expanded === "true",
+   node("bajo")?.dataset.expanded);
+ok("puntero quieto: sigue viva pasada su duracion", t.toasts.has("bajo"));
+
+// al salir el puntero se cierra y el tiempo vuelve a correr
+fire(st().el, "pointerleave");
+await sleep(400);
+ok("al salir: se cierra", node("bajo").dataset.expanded !== "true", node("bajo").dataset.expanded);
+ok("al salir: el tiempo vuelve a correr", t.timers.size === 1, String(t.timers.size));
+punteroEn(-100, -100);
+sileo.clear();
+await sleep(900);
+
+// --------------------------------------------- repetir la misma notificacion
+for (const [id, titulo] of [["r1", "Uno"], ["r2", "Dos"], ["r3", "Tres"], ["r4", "Cuatro"]]) {
+  sileo.info({ id, title: titulo, description: `Mensaje ${titulo}.`, autopilot: false, duration: null });
+  await sleep(60);
+}
+await sleep(300);
+ok("repetir: de partida, la vieja esta enterrada", node("r1").dataset.hidden === "true",
+   `${JSON.stringify(st().order)} ${node("r1").dataset.hidden}`);
+sileo.info({ id: "r1", title: "Uno", description: "Mensaje Uno.", autopilot: false, duration: null });
+await sleep(400);
+ok("repetir: la misma llamada la trae al frente", st().order[0] === "r1", JSON.stringify(st().order));
+ok("repetir: y se ve", !node("r1").dataset.hidden, node("r1").dataset.hidden);
+sileo.clear();
+await sleep(900);
+
+// repetirla mientras se estaba yendo: no puede perderse
+sileo.success({ id: "rep", title: "Guardado", description: "Todo listo.", duration: null, autopilot: false });
+await sleep(300);
+const instancia = () => t.toasts.get("rep")?.instanceId;
+const primera = instancia();
+sileo.dismiss("rep");
+await sleep(120); // en plena salida
+sileo.success({ id: "rep", title: "Guardado", description: "Todo listo.", duration: null, autopilot: false });
+await sleep(400);
+ok("repetir en plena salida: la notificacion se ve", !!t.toasts.get("rep"), String(!!t.toasts.get("rep")));
+ok("repetir en plena salida: no queda marcada como saliente",
+   t.toasts.get("rep")?.root.dataset.exiting !== "true",
+   t.toasts.get("rep")?.root.dataset.exiting);
+ok("repetir en plena salida: es otra instancia", instancia() !== primera);
+await sleep(700); // pasa el EXIT_DURATION de la primera
+ok("repetir en plena salida: la salida vieja no se la lleva", !!t.toasts.get("rep"));
+sileo.clear();
+await sleep(900);
+
 document.getElementById("log").textContent =
   log.join("\n") + `\n\n${fails === 0 ? "TODO OK" : fails + " FALLOS"}`;
 </script></body></html>

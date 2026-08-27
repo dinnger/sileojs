@@ -283,6 +283,16 @@ los anteriores, así que cambiarlos en caliente no deja restos.
 - **Arrastrar** vertical > 30px → descarta.
 - `prefers-reduced-motion` desactiva todo el movimiento.
 
+El cursor cuenta aunque no se mueva: si el toast **nace debajo** del puntero, el
+navegador no dispara `pointerenter`, así que Sileo comprueba dónde está el
+puntero al montar y al recolocar el stack. El panel se queda abierto y el
+auto-cierre en pausa hasta que el cursor **sale**, y ahí vuelve a contar.
+
+Llamar dos veces a la misma notificación no se pierde nunca: el toast vuelve al
+frente de la fila (aunque estuviera enterrado bajo el corte del stack o en plena
+salida), la cabecera repite su entrada aunque el texto sea idéntico y el tiempo
+arranca de cero.
+
 ## Fila de tabs solapadas
 
 Cuando hay varios toasts en la misma posición no se apilan como lista: forman una

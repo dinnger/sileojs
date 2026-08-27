@@ -626,6 +626,7 @@ toaster.destroy();                            // desmontar y limpiar</code></pre
 					<h2 class="titulo">Interacción</h2>
 					<ul>
 						<li><strong>Cursor encima</strong> → se abre el panel y se <strong>pausa</strong> el auto-cierre de todos los toasts.</li>
+						<li><strong>Cursor ya quieto ahí</strong> → cuenta igual. Si el toast nace debajo del puntero no hay <code>pointerenter</code> que valga, así que Sileo mira dónde está el cursor al montar y al recolocar: el panel se queda abierto hasta que <em>salga</em>.</li>
 						<li><strong>Cursor a otra tab</strong> → el enfoque salta a esa: se ensancha, muestra su título y abre su mensaje.</li>
 						<li><strong>Arrastrar</strong> en vertical más de 30&nbsp;px → se descarta.</li>
 						<li><strong>Teclado</strong> → cada toast es enfocable; al recibir el foco se comporta como si tuviera el cursor encima.</li>
@@ -635,6 +636,12 @@ toaster.destroy();                            // desmontar y limpiar</code></pre
 						El toast de estado <code>loading</code> nunca se despliega ni se
 						auto-cierra: está esperando a que lo actualices.
 					</p>
+					<div class="nota">
+						<strong>Repetir la misma notificación siempre se ve.</strong> Vuelve al
+						frente de la fila —aunque estuviera enterrada bajo el corte del stack o
+						en plena salida—, la cabecera repite su entrada aunque el texto sea
+						idéntico, y su tiempo arranca de cero.
+					</div>
 				</section>
 
 				<!-- ============================================================ -->

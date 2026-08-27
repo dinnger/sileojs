@@ -617,6 +617,7 @@ toaster.destroy();                            // unmount and clean up</code></pr
 					<h2 class="titulo">Interaction</h2>
 					<ul>
 						<li><strong>Pointer over</strong> → the panel opens and the auto-close of every toast is <strong>paused</strong>.</li>
+						<li><strong>Pointer already sitting there</strong> → counts just the same. A toast born under the cursor gets no <code>pointerenter</code>, so Sileo checks where the pointer is on mount and on every relayout: the panel stays open until it <em>leaves</em>.</li>
 						<li><strong>Pointer to another tab</strong> → focus jumps to it: it widens, shows its title and opens its message.</li>
 						<li><strong>Drag</strong> vertically more than 30&nbsp;px → it is dismissed.</li>
 						<li><strong>Keyboard</strong> → every toast is focusable; on focus it behaves as if the pointer were over it.</li>
@@ -626,6 +627,12 @@ toaster.destroy();                            // unmount and clean up</code></pr
 						A toast in the <code>loading</code> state never unfolds and never
 						auto-closes: it is waiting for you to update it.
 					</p>
+					<div class="nota">
+						<strong>Firing the same notification again always shows.</strong> It
+						comes back to the front of the row — even if it was buried under the
+						stack cut, or halfway out — the header replays its entrance even with
+						identical text, and its timer starts from zero.
+					</div>
 				</section>
 
 				<!-- ============================================================ -->
