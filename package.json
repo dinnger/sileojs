@@ -1,6 +1,6 @@
 {
   "name": "sileojs",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Toast notificaciones con morphing gooey y spring physics. Core vanilla JS (cero dependencias) + adaptador Vue 3. Toda la animacion en CSS.",
   "type": "module",
   "main": "./src/sileo.js",
@@ -9,8 +9,12 @@
     "./vue": "./src/vue.js",
     "./styles.css": "./src/sileo.css"
   },
-  "files": ["src"],
-  "sideEffects": ["./src/sileo.css"],
+  "files": [
+    "src"
+  ],
+  "sideEffects": [
+    "./src/sileo.css"
+  ],
   "keywords": [
     "toast",
     "notification",
