@@ -31,6 +31,9 @@ const T = {
 		error: "Error",
 		aqui: "Aquí.",
 		capsulaOscura: "Cápsula oscura.",
+		estilos: "Estilos",
+		estilosOn: "Título en versalitas y descripción azul, desde options.styles.",
+		estilosOff: "Los estilos globales se han quitado.",
 		capsulaClara: "Cápsula clara.",
 		sigueSistema: "Sigue al sistema.",
 		archivo: "reporte.pdf",
@@ -58,6 +61,9 @@ const T = {
 		error: "Error",
 		aqui: "Here.",
 		capsulaOscura: "Dark capsule.",
+		estilos: "Styles",
+		estilosOn: "Uppercase title and blue description, straight from options.styles.",
+		estilosOff: "The global styles are gone.",
 		capsulaClara: "Light capsule.",
 		sigueSistema: "Follows the system.",
 		archivo: "report.pdf",
@@ -145,6 +151,19 @@ const ejemplos = {
 	"tema-oscuro": () => {
 		toaster.set({ theme: "dark" });
 		sileo.success({ id: "t", title: "theme: dark", description: T.capsulaClara });
+	},
+	"estilos-on": () => {
+		toaster.set({
+			styles: {
+				title: { textTransform: "uppercase", letterSpacing: "0.08em" },
+				description: { color: "#38bdf8" },
+			},
+		});
+		sileo.info({ id: "st", title: T.estilos, description: T.estilosOn });
+	},
+	"estilos-off": () => {
+		toaster.set({ styles: null });
+		sileo.info({ id: "st", title: T.estilos, description: T.estilosOff });
 	},
 	"tema-sistema": () => {
 		toaster.set({ theme: "system" });

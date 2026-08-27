@@ -83,7 +83,11 @@ import "sileojs/styles.css";
 import App from "./App.vue";
 
 createApp(App)
-  .use(SileoPlugin, { position: "top-right", theme: "system" })
+  .use(SileoPlugin, {
+    position: "top-right",
+    theme: "light",
+    options: { roundness: 14, styles: { toast: "top-90" } },
+  })
   .mount("#app");
 ```
 
@@ -98,6 +102,40 @@ createApp(App)
 
 Pass `{ mount: false }` if you would rather mount the toaster yourself (or use
 the component).
+
+### Theme, position and styles on the fly
+
+`useSileoConfig()` returns a **reactive** object shared by the whole app.
+Mutating it reconfigures the toaster live, including the toasts already on
+screen:
+
+```vue
+<script setup>
+import { useSileoConfig } from "sileojs/vue";
+
+const cfg = useSileoConfig();
+
+const dark  = () => (cfg.theme = "dark");
+const below = () => (cfg.position = "bottom-center");
+const big   = () => (cfg.styles.title = "text-lg font-bold");
+</script>
+```
+
+| Field | What it is |
+| --- | --- |
+| `cfg.position` | one of the 6 positions |
+| `cfg.theme` | `light \| dark \| system` |
+| `cfg.offset` | number/string or `{ top, right, bottom, left }` |
+| `cfg.visibleToasts` | tabs visible in the stack |
+| `cfg.options` | defaults for every toast (`roundness`, `duration`…) |
+| `cfg.styles` | per-part styles (see [Per-part styles](#per-part-styles)) |
+
+In templates it is also available as `$sileoConfig`, and the component takes the
+same things as props:
+
+```vue
+<SileoToaster position="top-right" theme="light" :styles="{ toast: 'top-90' }" />
+```
 
 ## Other frameworks
 
@@ -124,6 +162,22 @@ ngOnDestroy(){ this.toaster.destroy(); }
 `destroy` uses `this`, so call it on the toaster (`() => toaster.destroy()`)
 rather than passing it bare as a callback.
 
+Changing theme, position or styles on the fly needs neither the toaster instance
+nor an adapter: `configure()` (or the `sileo` shorthands) reaches it from
+anywhere.
+
+```js
+import { configure, sileo } from "sileojs";
+
+configure({ theme: "dark" });                     // or sileo.setTheme("dark")
+configure({ position: "bottom-center" });         // or sileo.setPosition(...)
+configure({ styles: { toast: "top-90" } });       // or sileo.setStyles(...)
+sileo.getConfig();                                // the current config
+```
+
+Everything applies live: the toasts already on screen switch theme, move to the
+new position and repaint with the new styles.
+
 The demo (`demo/index.html`) carries the same example for each framework in
 tabs.
 
@@ -139,6 +193,9 @@ tabs.
 | `sileo.update(id, opts)` | Mutates a live toast (collapses, swaps, reopens) |
 | `sileo.dismiss(id)` | Animated exit |
 | `sileo.clear(position?)` | Clears everything, or one position |
+| `sileo.configure(opts)` | Reconfigures the toaster live (mounts it if missing) |
+| `sileo.setTheme / setPosition / setStyles(v)` | `configure` shorthands |
+| `sileo.getConfig()` | The current config (or `null` with no toaster) |
 
 They return the toast's `id` (`"sileo-default"` by default, so repeated calls
 **replace** the same toast; pass your own `id` to stack them).
@@ -153,7 +210,7 @@ They return the toast's `id` (`"sileo-default"` by default, so repeated calls
 | `position` | one of the 6 positions | the toaster's |
 | `duration` | `number \| null` (`null` = it stays) | `6000` |
 | `icon` | `string \| Node \| { html }` | the state's icon |
-| `styles` | `{ title, description, badge, button }` (CSS classes) | — |
+| `styles` | per-part styles, see [Per-part styles](#per-part-styles) | — |
 | `fill` | panel colour | per theme |
 | `roundness` | `number` (scales the gooey blur) | `16` |
 | `autopilot` | `false \| { expand, collapse }` (ms) | opens at 150ms, closes at 4000ms |
@@ -163,13 +220,63 @@ They return the toast's `id` (`"sileo-default"` by default, so repeated calls
 ### Toaster options
 
 `position`, `theme` (`light \| dark \| system`), `offset` (number/string or
-`{ top, right, bottom, left }`), `options` (defaults for every toast),
-`visibleToasts` (tabs visible in the stack), `container` (default
-`document.body`).
+`{ top, right, bottom, left }`), `options` (defaults for every toast), `styles`
+(shorthand for `options.styles`), `visibleToasts` (tabs visible in the stack),
+`container` (default `document.body`).
 
 The toaster is a single one for the whole page: `createToaster()` returns the
 existing one (applying the new options to it). `getToaster()` returns the mounted
 one or `null`, and the Vue component uses it to destroy only the one it created.
+
+`toaster.set(opts)` takes the same fields and applies them live. `options` and
+`styles` are **merged** with whatever was there; `null` clears them and
+`replace: true` swaps them wholesale (that is what the Vue adapter uses, since
+it already sends the full state). `toaster.config` returns the current config.
+
+## Per-part styles
+
+`styles` is a **part → style** object. Nothing in it is framework-specific: what
+you hand over are classes, CSS properties, or both.
+
+| Part | Node |
+| --- | --- |
+| `viewport` | the container for that position |
+| `toast` | the toast root |
+| `canvas`, `pill`, `body` | the gooey layers |
+| `header`, `badge`, `title` | the header (the tab itself) |
+| `content`, `description`, `button` | the open panel |
+| `count` | the `+N` chip |
+
+Three shapes, mixable across parts:
+
+```js
+sileo.success({
+  title: "Saved",
+  description: "All good.",
+  styles: {
+    toast: "rounded-2xl shadow-lg",              // classes
+    description: { color: "#64748b" },           // CSS properties
+    badge: { class: "ring-2", style: { "--x": "1" } }, // both
+  },
+});
+```
+
+`camelCase` and `kebab-case` properties work the same, and so do custom
+properties (`--sileo-*`), so any CSS variable can be reached from here.
+
+To apply them to **every** toast put them on the toaster — and change them
+whenever you like:
+
+```js
+createToaster({ position: "top-right", styles: { toast: "top-90" } });
+
+// later on, and it reaches what is already on screen
+configure({ styles: { title: "text-lg", toast: null } }); // null drops that part
+```
+
+They merge per part and the **toast wins**: if the toaster sets `styles.toast`
+and the call does too, the call's value is used. Applying new styles always
+removes the previous ones, so swapping them live leaves nothing behind.
 
 ## Interaction
 

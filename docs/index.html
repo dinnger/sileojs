@@ -64,7 +64,8 @@
 					<h2>Estilo</h2>
 					<a href="#variables">Variables CSS</a>
 					<a href="#temas">Temas</a>
-					<a href="#clases">Clases propias</a>
+					<a href="#clases">Estilos por parte</a>
+					<a href="#dinamico">Cambios en caliente</a>
 
 					<h2>Referencia</h2>
 					<a href="#accesibilidad">Accesibilidad</a>
@@ -234,7 +235,11 @@ import "sileojs/styles.css";
 import App from "./App.vue";
 
 createApp(App)
-  .use(SileoPlugin, { position: "top-right", theme: "system" })
+  .use(SileoPlugin, {
+    position: "top-right",
+    theme: "light",
+    options: { roundness: 14, styles: { toast: "top-90" } },
+  })
   .mount("#app");</code></pre></div>
 
 					<div class="codigo"><pre><code>&lt;!-- cualquier componente, sin imports --&gt;
@@ -278,9 +283,46 @@ const sileo = useSileo();
   &lt;/button&gt;
 &lt;/template&gt;</code></pre></div>
 					<p>
-						Props: <code>position</code>, <code>theme</code>, <code>offset</code> y
-						<code>options</code>. Cambiarlas reconfigura el toaster en caliente.
+						Props: <code>position</code>, <code>theme</code>, <code>offset</code>,
+						<code>visibleToasts</code>, <code>options</code> y <code>styles</code>
+						(atajo de <code>options.styles</code>). Cambiarlas reconfigura el toaster
+						en caliente.
 					</p>
+					<div class="codigo"><pre><code>&lt;SileoToaster position="top-right" theme="light" :styles="{ toast: 'top-90' }" /&gt;</code></pre></div>
+
+					<h3>Config reactiva: <code>useSileoConfig()</code></h3>
+					<p>
+						Devuelve un objeto reactivo compartido por toda la app. Mutarlo
+						reconfigura el toaster al vuelo — tema, posición y estilos incluidos, y
+						también sobre los toasts que ya están en pantalla. En plantillas está
+						como <code>$sileoConfig</code>.
+					</p>
+					<div class="codigo"><pre><code>&lt;script setup&gt;
+import { useSileoConfig } from "sileojs/vue";
+
+const cfg = useSileoConfig();
+
+const oscuro = () =&gt; (cfg.theme = "dark");
+const abajo  = () =&gt; (cfg.position = "bottom-center");
+const gordo  = () =&gt; (cfg.styles.title = "text-lg font-bold");
+&lt;/script&gt;
+
+&lt;template&gt;
+  &lt;select v-model="cfg.theme"&gt;
+    &lt;option&gt;light&lt;/option&gt;&lt;option&gt;dark&lt;/option&gt;&lt;option&gt;system&lt;/option&gt;
+  &lt;/select&gt;
+&lt;/template&gt;</code></pre></div>
+					<table>
+						<thead><tr><th>Campo</th><th>Qué es</th></tr></thead>
+						<tbody>
+							<tr><td><code>cfg.position</code></td><td>Una de las 6 posiciones</td></tr>
+							<tr><td><code>cfg.theme</code></td><td><code>light | dark | system</code></td></tr>
+							<tr><td><code>cfg.offset</code></td><td>Número/string o <code>{ top, right, bottom, left }</code></td></tr>
+							<tr><td><code>cfg.visibleToasts</code></td><td>Tabs visibles en la fila</td></tr>
+							<tr><td><code>cfg.options</code></td><td>Defaults de todos los toasts</td></tr>
+							<tr><td><code>cfg.styles</code></td><td>Estilos por parte (ver <a href="#clases">Estilos por parte</a>)</td></tr>
+						</tbody>
+					</table>
 					<div class="nota">
 						El toaster es único para toda la página. Si ya lo montó el plugin (u
 						otro <code>createToaster()</code>), el componente lo reutiliza y
@@ -417,6 +459,11 @@ export class AppComponent implements OnInit, OnDestroy {
 							<tr><td><code>sileo.update(id, opts)</code></td><td>—</td><td>Cambia un toast vivo: colapsa, cambia el contenido y sigue</td></tr>
 							<tr><td><code>sileo.dismiss(id)</code></td><td>—</td><td>Salida animada</td></tr>
 							<tr><td><code>sileo.clear(position?)</code></td><td>—</td><td>Limpia todo, o solo una posición</td></tr>
+							<tr><td><code>sileo.configure(opts)</code></td><td>el toaster</td><td>Reconfigura en caliente (lo monta si no hay)</td></tr>
+							<tr><td><code>sileo.setTheme(t)</code></td><td>el toaster</td><td rowspan="3">Atajos de <code>configure</code></td></tr>
+							<tr><td><code>sileo.setPosition(p)</code></td><td>el toaster</td></tr>
+							<tr><td><code>sileo.setStyles(s)</code></td><td>el toaster</td></tr>
+							<tr><td><code>sileo.getConfig()</code></td><td>la config</td><td>La config actual, o <code>null</code> si no hay toaster</td></tr>
 						</tbody>
 					</table>
 
@@ -469,7 +516,7 @@ export class AppComponent implements OnInit, OnDestroy {
 							<tr><td><code>duration</code></td><td><code>number | null</code></td><td><code>6000</code></td><td>ms hasta cerrarse. <code>null</code> = se queda</td></tr>
 							<tr><td><code>icon</code></td><td><code>Node | {html} | string</code></td><td>el del estado</td><td>Un <code>string</code> se inserta como texto; para un SVG usa <code>{ html }</code></td></tr>
 							<tr><td><code>button</code></td><td><code>{ title, onClick }</code></td><td>—</td><td>Botón dentro del panel</td></tr>
-							<tr><td><code>styles</code></td><td><code>{ title, description, badge, button }</code></td><td>—</td><td>Clases CSS tuyas para cada parte</td></tr>
+							<tr><td><code>styles</code></td><td><code>{ [parte]: string | objeto }</code></td><td>—</td><td>Clases y/o CSS por parte, ver <a href="#clases">Estilos por parte</a></td></tr>
 							<tr><td><code>className</code></td><td><code>string</code></td><td>—</td><td>Clase para la raíz del toast</td></tr>
 							<tr><td><code>fill</code></td><td><code>string</code></td><td>según tema</td><td>Color de la cápsula y el panel</td></tr>
 							<tr><td><code>roundness</code></td><td><code>number</code></td><td><code>16</code></td><td>Radio; también escala el blur del gooey</td></tr>
@@ -513,11 +560,16 @@ export class AppComponent implements OnInit, OnDestroy {
   options: {                 // valores por defecto para todos los toasts
     duration: 4000,
     roundness: 20,
+    styles: { toast: "top-90" },
   },
+  styles: { title: "font-bold" },  // atajo de options.styles
   container: document.body,  // dónde montar los viewports
 });
 
 toaster.set({ position: "bottom-center" });   // reconfigurar en caliente
+toaster.set({ theme: "dark" });
+toaster.set({ styles: { badge: "ring-1" } }); // se mezcla con lo que hubiera
+toaster.config;                               // la config actual
 toaster.destroy();                            // desmontar y limpiar</code></pre></div>
 
 					<table>
@@ -548,6 +600,9 @@ toaster.destroy();                            // desmontar y limpiar</code></pre
 							<tr><td><code>sileo</code> <em>(también default)</em></td><td>La API para lanzar toasts</td></tr>
 							<tr><td><code>createToaster(opts)</code></td><td>Monta el toaster (o reconfigura el que haya) y lo devuelve</td></tr>
 							<tr><td><code>getToaster()</code></td><td>El toaster montado, o <code>null</code></td></tr>
+							<tr><td><code>configure(opts)</code></td><td>Reconfigura el toaster en caliente desde cualquier sitio</td></tr>
+							<tr><td><code>getConfig()</code></td><td>La config actual, o <code>null</code></td></tr>
+							<tr><td><code>STYLE_PARTS</code></td><td>Los nombres de las partes estilables, como array</td></tr>
 							<tr><td><code>Toaster</code></td><td>La clase, por si quieres instanciarla tú</td></tr>
 							<tr><td><code>dismissToast(id)</code></td><td>Igual que <code>sileo.dismiss</code></td></tr>
 							<tr><td><code>SILEO_POSITIONS</code> · <code>SILEO_STATES</code></td><td>Los valores válidos, como arrays</td></tr>
@@ -561,6 +616,7 @@ toaster.destroy();                            // desmontar y limpiar</code></pre
 							<tr><td><code>SileoPlugin</code> <em>(también default)</em></td><td>Monta el toaster, registra el componente y <code>$sileo</code></td></tr>
 							<tr><td><code>SileoToaster</code></td><td>El componente</td></tr>
 							<tr><td><code>useSileo()</code></td><td>Devuelve <code>sileo</code>, para composables</td></tr>
+							<tr><td><code>useSileoConfig()</code></td><td>La config reactiva (tema, posición, estilos)</td></tr>
 						</tbody>
 					</table>
 				</section>
@@ -710,23 +766,50 @@ sileo.info({
 
 				<!-- ============================================================ -->
 				<section id="clases">
-					<h2 class="titulo">Clases propias</h2>
+					<h2 class="titulo">Estilos por parte</h2>
 					<p>
-						Con <code>styles</code> (por toast) o <code>options.styles</code> (para
-						todos) pones tus clases en cada parte. Útil con Tailwind o CSS modules.
+						<code>styles</code> es un objeto <strong>parte → estilo</strong>. No hay
+						nada de ningún framework en él: lo que le pasas son clases, propiedades
+						CSS, o las dos. Va por toast (<code>styles</code>) o para todos
+						(<code>options.styles</code> del toaster).
 					</p>
+					<table>
+						<thead><tr><th>Parte</th><th>Nodo</th></tr></thead>
+						<tbody>
+							<tr><td><code>viewport</code></td><td>El contenedor de esa posición</td></tr>
+							<tr><td><code>toast</code></td><td>La raíz del toast</td></tr>
+							<tr><td><code>canvas</code> · <code>pill</code> · <code>body</code></td><td>Las capas del gooey</td></tr>
+							<tr><td><code>header</code> · <code>badge</code> · <code>title</code></td><td>La cabecera (la tab)</td></tr>
+							<tr><td><code>content</code> · <code>description</code> · <code>button</code></td><td>El panel abierto</td></tr>
+							<tr><td><code>count</code></td><td>El indicador <code>+N</code></td></tr>
+						</tbody>
+					</table>
+					<p>Tres formas, y se pueden mezclar entre partes:</p>
 					<div class="codigo"><pre><code>createToaster({
+  position: "top-right",
   options: {
-    styles: { description: "text-sm text-slate-500" },
+    roundness: 14,
+    styles: { toast: "top-90" },   // para todos los toasts
   },
 });
 
 sileo.success({
   title: "Guardado",
   description: "Todo listo.",
-  className: "mi-toast",
-  styles: { title: "font-bold", badge: "ring-1" },
+  styles: {
+    toast: "rounded-2xl shadow-lg",                     // clases
+    description: { color: "#64748b", fontSize: "13px" }, // propiedades CSS
+    badge: { class: "ring-1", style: { "--sileo-roundness": "20px" } },
+  },
 });</code></pre></div>
+					<div class="nota">
+						<code>camelCase</code> y <code>kebab-case</code> valen igual, y las custom
+						properties (<code>--sileo-*</code>) también: desde <code>styles</code> se
+						puede tocar cualquier variable del CSS sin escribir una hoja aparte.
+						Los estilos se mezclan por parte y <strong>gana el toast</strong>: si el
+						toaster pone <code>styles.toast</code> y la llamada también, se usa el de
+						la llamada. Poner <code>null</code> en una parte la deja limpia.
+					</div>
 					<p>
 						Si prefieres apuntar al DOM, cada parte tiene su atributo:
 						<code>[data-sileo-toast]</code>, <code>[data-sileo-header]</code>,
@@ -738,6 +821,48 @@ sileo.success({
 						ten en cuenta que la raíz del toast <em>es</em> un
 						<code>&lt;button&gt;</code>. Sileo se defiende subiendo la especificidad
 						de sus propios estilos, pero acostumbra a scopear los tuyos.
+					</div>
+				</section>
+
+				<!-- ============================================================ -->
+				<section id="dinamico">
+					<h2 class="titulo">Cambios en caliente</h2>
+					<p>
+						Tema, posición y estilos se pueden cambiar en cualquier momento, y lo
+						que ya está en pantalla se reajusta: los toasts cambian de relleno, se
+						mudan al viewport nuevo y se repintan con los estilos nuevos.
+						<code>configure()</code> no necesita el toaster ni ningún adaptador, así
+						que sirve igual en vanilla, React, Svelte o Angular.
+					</p>
+					<div class="codigo"><pre><code>import { configure, sileo } from "sileojs";
+
+configure({ theme: "dark" });                 // o sileo.setTheme("dark")
+configure({ position: "bottom-center" });     // o sileo.setPosition(…)
+configure({ styles: { toast: "top-90" } });   // o sileo.setStyles(…)
+
+sileo.getConfig();  // { position, theme, resolvedTheme, offset, options, styles }</code></pre></div>
+					<div class="probar">
+						<button type="button" data-run="tema-oscuro">theme: dark</button>
+						<button type="button" data-run="tema-claro">theme: light</button>
+						<button type="button" data-run="pos-br">bottom-right</button>
+						<button type="button" data-run="reset-pos">volver a top-right</button>
+						<button type="button" data-run="estilos-on">poner estilos</button>
+						<button type="button" data-run="estilos-off">quitarlos</button>
+					</div>
+					<table>
+						<thead><tr><th>Qué pasa</th><th>Con qué</th></tr></thead>
+						<tbody>
+							<tr><td>Los estilos se mezclan con los que hubiera</td><td><code>configure({ styles })</code></td></tr>
+							<tr><td>Se borra una parte</td><td><code>configure({ styles: { title: null } })</code></td></tr>
+							<tr><td>Se borran todos los defaults</td><td><code>configure({ options: null })</code></td></tr>
+							<tr><td>Se sustituyen en bloque</td><td><code>configure({ styles, replace: true })</code></td></tr>
+						</tbody>
+					</table>
+					<div class="nota">
+						Un toast que pidió su propia <code>position</code> se queda donde está;
+						los demás siguen la del toaster. Y si el tema pasa a
+						<code>"system"</code>, el toaster vuelve a escuchar a
+						<code>prefers-color-scheme</code>.
 					</div>
 				</section>
 

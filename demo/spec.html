@@ -288,6 +288,115 @@ sileo.info({ id: "solo", title: "Sola", description: "Una nada mas.", duration: 
 await sleep(300);
 ok("con pocas, sin indicador", chip().dataset.visible !== "true", chip().textContent);
 
+
+// ------------------------------------------------------------------- estilos
+sileo.clear();
+await sleep(900);
+t.set({ position: POS, styles: null });
+sileo.success({
+  id: "sty", title: "Estilos", description: "Con clases.", duration: null, autopilot: false,
+  styles: { toast: "mi-toast", badge: "mi-badge", title: "mi-title", description: "mi-desc", header: "mi-header" },
+});
+await sleep(300);
+const nsty = () => node("sty");
+ok("styles: clase en la raiz", nsty().classList.contains("mi-toast"), nsty().className);
+ok("styles: clase en el badge", !!nsty().querySelector("[data-sileo-badge].mi-badge"));
+ok("styles: clase en el titulo", !!nsty().querySelector("[data-sileo-title].mi-title"));
+ok("styles: clase en la descripcion", !!nsty().querySelector("[data-sileo-description].mi-desc"));
+ok("styles: clase en la cabecera", !!nsty().querySelector("[data-sileo-header].mi-header"));
+ok("styles: no pisa los data-attrs", nsty().hasAttribute("data-sileo-toast"));
+
+// propiedades CSS sueltas, sin clases (framework-agnostico de verdad)
+const cont = () => nsty().querySelector("[data-sileo-content]");
+t.set({ styles: { content: { "--mi-var": "22px", color: "rgb(255, 0, 0)" }, toast: "global-toast" } });
+await sleep(150);
+ok("styles globales: custom property en caliente",
+   cont().style.getPropertyValue("--mi-var") === "22px",
+   cont().style.cssText);
+ok("styles globales: propiedad CSS normal", cont().style.color === "rgb(255, 0, 0)", cont().style.color);
+ok("styles globales: la parte que pide el toast gana",
+   nsty().classList.contains("mi-toast") && !nsty().classList.contains("global-toast"),
+   nsty().className);
+
+// forma { class, style }
+t.set({ styles: { content: { class: "otra", style: { opacity: "0.9" } } } });
+await sleep(150);
+ok("styles: forma { class, style }",
+   cont().classList.contains("otra") && cont().style.opacity === "0.9",
+   cont().style.cssText);
+ok("styles: al cambiar se retira lo anterior",
+   cont().style.getPropertyValue("--mi-var") === "",
+   cont().style.cssText);
+
+// pisar una variable de Sileo y soltarla: la nuestra vuelve (toast sin styles
+// propios, que los del toast ganan a los globales)
+sileo.info({ id: "sty2", title: "Var", description: "Pisando --sileo-fill.", duration: null, autopilot: false });
+await sleep(250);
+const nvar = () => t.toasts.get("sty2").root;
+t.set({ styles: { toast: { "--sileo-fill": "rgb(1, 2, 3)" } } });
+await sleep(150);
+ok("styles: el usuario pisa --sileo-fill",
+   nvar().style.getPropertyValue("--sileo-fill") === "rgb(1, 2, 3)",
+   nvar().style.getPropertyValue("--sileo-fill"));
+t.set({ styles: { toast: "solo-clase" } });
+await sleep(150);
+ok("styles: al soltarla vuelve la de Sileo",
+   nvar().style.getPropertyValue("--sileo-fill") !== "" &&
+     nvar().style.getPropertyValue("--sileo-fill") !== "rgb(1, 2, 3)",
+   nvar().style.getPropertyValue("--sileo-fill"));
+ok("styles: el gooey no se pierde por el camino",
+   nvar().style.getPropertyValue("--sileo-goo").startsWith("url("),
+   nvar().style.getPropertyValue("--sileo-goo"));
+sileo.dismiss("sty2");
+await sleep(700);
+
+// quitar un estilo global
+t.set({ styles: { content: null } });
+await sleep(150);
+ok("styles: null quita la clase global", !cont().classList.contains("otra"));
+ok("styles: los del toast siguen", nsty().classList.contains("mi-toast"));
+
+// viewport
+t.set({ styles: { viewport: "mi-viewport" } });
+await sleep(150);
+ok("styles: clase en el viewport", st().el.classList.contains("mi-viewport"));
+t.set({ styles: null });
+await sleep(150);
+ok("styles: null limpia todos los globales",
+   !st().el.classList.contains("mi-viewport") && !nsty().classList.contains("global-toast"));
+
+// --------------------------------------------------- tema y posicion en vivo
+t.set({ theme: "dark" });
+await sleep(150);
+ok("tema dinamico: el viewport lo refleja", st().el.dataset.theme === "dark", st().el.dataset.theme);
+t.set({ theme: "light" });
+await sleep(150);
+ok("tema dinamico: y cambia otra vez", st().el.dataset.theme === "light", st().el.dataset.theme);
+t.set({ theme: "system" });
+await sleep(150);
+ok("tema dinamico: system vuelve a escuchar al SO", !!t.mq);
+
+const OTRA = "bottom-left";
+t.set({ position: OTRA });
+await sleep(300);
+ok("posicion dinamica: el toast se muda de viewport",
+   !!t.stacks.get(OTRA)?.el.querySelector("[data-sileo-toast]"),
+   [...t.viewports.keys()].join(","));
+ok("posicion dinamica: el viewport viejo se recoge", !t.viewports.has(POS));
+ok("posicion dinamica: la direccion se recalcula",
+   t.toasts.get("sty").root.dataset.edge === "top", t.toasts.get("sty").root.dataset.edge);
+
+// un toast con posicion propia no se mueve con el toaster
+sileo.info({ id: "fijo", title: "Fijo", position: "top-center", duration: null, autopilot: false });
+await sleep(250);
+t.set({ position: POS });
+await sleep(300);
+ok("posicion dinamica: respeta la posicion propia del toast",
+   t.toasts.get("fijo").pos === "top-center", t.toasts.get("fijo").pos);
+ok("posicion dinamica: el resto sigue al toaster", t.toasts.get("sty").pos === POS);
+sileo.clear();
+await sleep(900);
+
 document.getElementById("log").textContent =
   log.join("\n") + `\n\n${fails === 0 ? "TODO OK" : fails + " FALLOS"}`;
 </script></body></html>

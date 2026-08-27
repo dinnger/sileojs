@@ -725,6 +725,9 @@ import "sileojs/styles.css";
 // una sola vez, al arrancar la app
 createToaster({ position: "top-right", theme: "system" });
 
+// y en cualquier momento, desde donde sea:
+// configure({ theme: "dark", styles: { toast: "mi-clase" } });
+
 sileo.success({
   title: "Guardado",
   description: "Tus cambios se sincronizaron.",
@@ -737,7 +740,11 @@ import "sileojs/styles.css";
 import App from "./App.vue";
 
 createApp(App)
-  .use(SileoPlugin, { position: "top-right", theme: "system" })
+  .use(SileoPlugin, {
+    position: "top-right",
+    theme: "light",
+    options: { roundness: 14, styles: { toast: "top-90" } },
+  })
   .mount("#app");
 
 
@@ -754,17 +761,20 @@ import { sileo } from "sileojs";        // o inject("sileo")
 &lt;/script&gt;</code></pre>
 
       <pre role="tabpanel" id="code-vue" aria-labelledby="tab-vue" tabindex="0" hidden><code>&lt;script setup&gt;
-import { SileoToaster } from "sileojs/vue";
+import { SileoToaster, useSileoConfig } from "sileojs/vue";
 import { sileo } from "sileojs";
 import "sileojs/styles.css";
+
+// config reactiva: tema, posicion y estilos en caliente
+const cfg = useSileoConfig();
 &lt;/script&gt;
 
 &lt;template&gt;
-  &lt;SileoToaster position="top-right" theme="system" /&gt;
+  &lt;SileoToaster position="top-right" theme="light" :styles="{ toast: 'top-90' }" /&gt;
 
-  &lt;button @click="sileo.success({ title: 'Guardado' })"&gt;
-    Guardar
-  &lt;/button&gt;
+  &lt;button @click="sileo.success({ title: 'Guardado' })"&gt;Guardar&lt;/button&gt;
+  &lt;button @click="cfg.theme = 'dark'"&gt;Tema oscuro&lt;/button&gt;
+  &lt;button @click="cfg.position = 'bottom-center'"&gt;Abajo&lt;/button&gt;
 &lt;/template&gt;</code></pre>
 
       <pre role="tabpanel" id="code-react" aria-labelledby="tab-react" tabindex="0" hidden><code>import { useEffect } from "react";

@@ -9,10 +9,12 @@
 </head><body>
 <div id="global"></div>
 <div id="comp"></div>
+<div id="styles"></div>
 <pre id="log"></pre>
 <script type="module">
 import { createApp, h } from "vue";
-import { SileoPlugin, SileoToaster, useSileo } from "../src/vue.js";
+import { sileo } from "../src/sileo.js";
+import { SileoPlugin, SileoToaster, useSileo, useSileoConfig } from "../src/vue.js";
 
 const out = [];
 const ok = (name, cond, extra = "") => out.push(`${cond ? "PASS" : "FAIL"}  ${name}${extra ? "  -> " + extra : ""}`);
@@ -61,6 +63,65 @@ document.getElementById("b-global").click();
 await sleep(300);
 ok("unmount: $sileo sigue funcionando",
    !!document.querySelector('[data-sileo-toast][data-state="success"]'));
+
+
+/* -------- D. estilos por el plugin y config dinamica ---------------------- */
+const appD = createApp({
+  setup() {
+    const cfg = useSileoConfig();
+    return {
+      cfg,
+      lanzar: () => sileo.warning({ id: "sty", title: "Estilos", description: "Desde el plugin." }),
+    };
+  },
+  template: `<button id="b-sty" @click="lanzar">Ir</button>`,
+});
+appD.use(SileoPlugin, {
+  mount: false,
+  position: "top-right",
+  theme: "light",
+  options: { roundness: 14, styles: { toast: "top-90", badge: "mi-badge" } },
+});
+const vmD = appD.mount("#styles");
+await sleep(200);
+document.getElementById("b-sty").click();
+await sleep(400);
+
+const nsty = () => document.querySelector('[data-sileo-toast][data-state="warning"]');
+ok("plugin: options.styles pone la clase en el toast", !!nsty()?.classList.contains("top-90"),
+   nsty()?.className);
+ok("plugin: options.styles llega al badge", !!nsty()?.querySelector("[data-sileo-badge].mi-badge"));
+ok("plugin: options.roundness se aplica",
+   nsty()?.style.getPropertyValue("--sileo-roundness") === "14px",
+   nsty()?.style.getPropertyValue("--sileo-roundness"));
+ok("plugin: theme light en el viewport",
+   nsty()?.closest("[data-sileo-viewport]")?.dataset.theme === "light",
+   nsty()?.closest("[data-sileo-viewport]")?.dataset.theme);
+
+// tema dinamico
+vmD.cfg.theme = "dark";
+await sleep(200);
+ok("config reactiva: cambiar el tema en caliente",
+   nsty()?.closest("[data-sileo-viewport]")?.dataset.theme === "dark",
+   nsty()?.closest("[data-sileo-viewport]")?.dataset.theme);
+
+// posicion dinamica
+vmD.cfg.position = "bottom-center";
+await sleep(300);
+ok("config reactiva: cambiar la posicion en caliente",
+   nsty()?.closest("[data-sileo-viewport]")?.dataset.position === "bottom-center",
+   nsty()?.closest("[data-sileo-viewport]")?.dataset.position);
+
+// estilos dinamicos
+vmD.cfg.styles.toast = "otra-clase";
+await sleep(200);
+ok("config reactiva: cambiar styles en caliente",
+   nsty()?.classList.contains("otra-clase") && !nsty()?.classList.contains("top-90"),
+   nsty()?.className);
+delete vmD.cfg.styles.toast;
+await sleep(200);
+ok("config reactiva: borrar un style lo quita del DOM",
+   !nsty()?.classList.contains("otra-clase"), nsty()?.className);
 
 document.getElementById("log").textContent = out.join("\n") +
   (out.some((l) => l.startsWith("FAIL")) ? "\n\nHAY FALLOS" : "\n\nTODO OK");

@@ -82,7 +82,11 @@ import "sileojs/styles.css";
 import App from "./App.vue";
 
 createApp(App)
-  .use(SileoPlugin, { position: "top-right", theme: "system" })
+  .use(SileoPlugin, {
+    position: "top-right",
+    theme: "light",
+    options: { roundness: 14, styles: { toast: "top-90" } },
+  })
   .mount("#app");
 ```
 
@@ -97,6 +101,40 @@ createApp(App)
 
 Pasa `{ mount: false }` si prefieres montar el toaster tú (o usar el
 componente).
+
+### Tema, posición y estilos en caliente
+
+`useSileoConfig()` devuelve un objeto **reactivo** compartido por toda la app.
+Mutarlo reconfigura el toaster al vuelo, incluidos los toasts que ya están en
+pantalla:
+
+```vue
+<script setup>
+import { useSileoConfig } from "sileojs/vue";
+
+const cfg = useSileoConfig();
+
+const oscuro = () => (cfg.theme = "dark");
+const abajo  = () => (cfg.position = "bottom-center");
+const gordo  = () => (cfg.styles.title = "text-lg font-bold");
+</script>
+```
+
+| Campo | Qué es |
+| --- | --- |
+| `cfg.position` | una de las 6 posiciones |
+| `cfg.theme` | `light \| dark \| system` |
+| `cfg.offset` | número/string o `{ top, right, bottom, left }` |
+| `cfg.visibleToasts` | tabs visibles del stack |
+| `cfg.options` | defaults de todos los toasts (`roundness`, `duration`…) |
+| `cfg.styles` | estilos por parte (ver [Estilos por parte](#estilos-por-parte)) |
+
+En plantillas está también como `$sileoConfig`, y el componente acepta las
+mismas cosas como props:
+
+```vue
+<SileoToaster position="top-right" theme="light" :styles="{ toast: 'top-90' }" />
+```
 
 ## Otros frameworks
 
@@ -123,6 +161,21 @@ ngOnDestroy(){ this.toaster.destroy(); }
 `destroy` usa `this`, así que hay que llamarlo sobre el toaster
 (`() => toaster.destroy()`), no pasarlo suelto como callback.
 
+Para cambiar tema, posición o estilos en caliente no hace falta el toaster ni
+ningún adaptador: `configure()` (o los atajos de `sileo`) llega desde donde sea.
+
+```js
+import { configure, sileo } from "sileojs";
+
+configure({ theme: "dark" });                     // o sileo.setTheme("dark")
+configure({ position: "bottom-center" });         // o sileo.setPosition(...)
+configure({ styles: { toast: "top-90" } });       // o sileo.setStyles(...)
+sileo.getConfig();                                // la config actual
+```
+
+Todo se aplica al vuelo: los toasts que ya están en pantalla cambian de tema,
+se mudan de posición y se repintan con los estilos nuevos.
+
 La demo (`demo/index.html`) trae el mismo ejemplo para cada framework en
 pestañas.
 
@@ -138,6 +191,9 @@ pestañas.
 | `sileo.update(id, opts)` | Muta un toast vivo (colapsa, cambia, reabre) |
 | `sileo.dismiss(id)` | Salida animada |
 | `sileo.clear(position?)` | Limpia todo o una posición |
+| `sileo.configure(opts)` | Reconfigura el toaster en caliente (lo monta si no hay) |
+| `sileo.setTheme / setPosition / setStyles(v)` | Atajos de `configure` |
+| `sileo.getConfig()` | La config actual (o `null` si no hay toaster) |
 
 Devuelven el `id` del toast (por defecto `"sileo-default"`, así que llamadas
 repetidas **reemplazan** el mismo toast; pasa un `id` propio para apilar).
@@ -152,7 +208,7 @@ repetidas **reemplazan** el mismo toast; pasa un `id` propio para apilar).
 | `position` | una de las 6 posiciones | la del toaster |
 | `duration` | `number \| null` (`null` = persistente) | `6000` |
 | `icon` | `string \| Node \| { html }` | icono del estado |
-| `styles` | `{ title, description, badge, button }` (clases CSS) | — |
+| `styles` | estilos por parte, ver [Estilos por parte](#estilos-por-parte) | — |
 | `fill` | color del panel | según tema |
 | `roundness` | `number` (escala el blur del gooey) | `16` |
 | `autopilot` | `false \| { expand, collapse }` (ms) | expande a 150ms, colapsa a 4000ms |
@@ -163,11 +219,63 @@ repetidas **reemplazan** el mismo toast; pasa un `id` propio para apilar).
 
 `position`, `theme` (`light \| dark \| system`), `offset` (número/string o
 `{ top, right, bottom, left }`), `options` (defaults para todos los toasts),
-`visibleToasts` (tabs visibles del stack), `container` (default `document.body`).
+`styles` (atajo de `options.styles`), `visibleToasts` (tabs visibles del stack),
+`container` (default `document.body`).
 
 El toaster es único para toda la página: `createToaster()` devuelve el que ya
 hubiera (aplicándole las opciones nuevas). `getToaster()` devuelve el montado o
 `null`, y el componente de Vue lo usa para destruir solo el que creó él.
+
+`toaster.set(opts)` acepta lo mismo y lo aplica en caliente. Por defecto
+`options` y `styles` se **mezclan** con lo que ya hubiera; `null` los borra y
+`replace: true` los sustituye (es lo que usa el adaptador de Vue, que ya manda
+el estado completo). `toaster.config` devuelve la config actual.
+
+## Estilos por parte
+
+`styles` es un objeto **parte → estilo**. No hay nada específico de ningún
+framework: lo que se le pasa son clases, propiedades CSS, o las dos.
+
+| Parte | Nodo |
+| --- | --- |
+| `viewport` | el contenedor de la posición |
+| `toast` | la raíz del toast |
+| `canvas`, `pill`, `body` | las capas del gooey |
+| `header`, `badge`, `title` | la cabecera (la tab) |
+| `content`, `description`, `button` | el panel abierto |
+| `count` | el indicador `+N` |
+
+Tres formas, y se pueden mezclar entre partes:
+
+```js
+sileo.success({
+  title: "Guardado",
+  description: "Todo listo.",
+  styles: {
+    toast: "rounded-2xl shadow-lg",              // clases
+    description: { color: "#64748b" },           // propiedades CSS
+    badge: { class: "ring-2", style: { "--x": "1" } }, // las dos
+  },
+});
+```
+
+Las propiedades en `camelCase` o `kebab-case` valen igual, y las custom
+properties (`--sileo-*`) también, así que desde ahí se puede tocar cualquier
+variable del CSS.
+
+Para que valgan en **todos** los toasts van en el toaster, y se pueden cambiar
+en cualquier momento:
+
+```js
+createToaster({ position: "top-right", styles: { toast: "top-90" } });
+
+// más tarde, y afecta también a lo que ya está en pantalla
+configure({ styles: { title: "text-lg", toast: null } }); // null quita esa parte
+```
+
+Se mezclan por parte y **gana el toast**: si el toaster pone `styles.toast` y la
+llamada también, se usa el de la llamada. Aplicar estilos nuevos retira siempre
+los anteriores, así que cambiarlos en caliente no deja restos.
 
 ## Interacción
 

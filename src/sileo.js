@@ -121,6 +121,96 @@ const pillAlign = (pos) =>
 
 const expandDir = (pos) => (pos.startsWith("top") ? "bottom" : "top");
 
+/* ------------------------------ Estilos de usuario ------------------------ */
+
+/**
+ * Partes estilables. El nombre es el mismo en `styles` (por toast) y en
+ * `options.styles` (globales), y no depende de ningun framework: lo que llegue
+ * son clases y/o propiedades CSS sueltas.
+ */
+export const STYLE_PARTS = [
+	"viewport",
+	"toast",
+	"canvas",
+	"pill",
+	"body",
+	"header",
+	"badge",
+	"title",
+	"content",
+	"description",
+	"button",
+	"count",
+];
+
+/** Lo ultimo aplicado a cada nodo, para poder retirarlo cuando cambia. */
+const STYLE_STATE = new WeakMap();
+
+const cssProp = (k) =>
+	k.startsWith("--") ? k : k.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`);
+
+/**
+ * Aplica un estilo de usuario a un nodo. Acepta las tres formas:
+ *
+ *   "top-90 rounded-xl"                 -> clases
+ *   { color: "red", fontSize: "12px" }  -> propiedades CSS
+ *   { class: "...", style: {...} }      -> las dos
+ *
+ * Es idempotente: retira lo que hubiera puesto antes, asi que cambiar los
+ * estilos en caliente no deja restos.
+ */
+function styleNode(node, value) {
+	if (!node) return;
+	const prev = STYLE_STATE.get(node);
+	if (prev) {
+		for (const c of prev.classes) node.classList.remove(c);
+		for (const p of prev.props) node.style.removeProperty(p);
+	}
+	if (value == null || value === false || value === "") {
+		STYLE_STATE.delete(node);
+		return;
+	}
+
+	let cls = "";
+	let css;
+	if (typeof value === "string") {
+		cls = value;
+	} else if (typeof value === "object") {
+		if ("class" in value || "className" in value || "style" in value) {
+			cls = value.class ?? value.className ?? "";
+			css = value.style;
+		} else {
+			css = value;
+		}
+	}
+
+	const classes = String(cls || "").split(/\s+/).filter(Boolean);
+	for (const c of classes) node.classList.add(c);
+
+	const props = [];
+	const set = (k, v) => {
+		if (v == null || v === false) return;
+		const prop = cssProp(String(k).trim());
+		if (!prop) return;
+		node.style.setProperty(prop, String(v).trim());
+		props.push(prop);
+	};
+	if (typeof css === "string") {
+		for (const decl of css.split(";")) {
+			const i = decl.indexOf(":");
+			if (i > 0) set(decl.slice(0, i), decl.slice(i + 1));
+		}
+	} else if (css && typeof css === "object") {
+		for (const k in css) set(k, css[k]);
+	}
+
+	STYLE_STATE.set(node, { classes, props });
+}
+
+/** Mezcla los estilos globales con los del toast (gana el toast). */
+const mergeStyles = (base, extra) =>
+	base || extra ? { ...base, ...extra } : undefined;
+
 /** Acepta string, Node o {html}. */
 function fill(node, value) {
 	node.textContent = "";
@@ -167,8 +257,10 @@ class SileoToast {
 		});
 		this.goo = gooDefs(DEFAULT_ROUNDNESS * BLUR_RATIO);
 		canvas.appendChild(this.goo.svg);
-		canvas.appendChild(el("div", { "data-sileo-pill": "", "data-align": this.align }));
-		canvas.appendChild(el("div", { "data-sileo-body": "" }));
+		const pill = el("div", { "data-sileo-pill": "", "data-align": this.align });
+		const body = el("div", { "data-sileo-body": "" });
+		canvas.appendChild(pill);
+		canvas.appendChild(body);
 
 		const header = el("div", {
 			"data-sileo-header": "",
@@ -188,6 +280,9 @@ class SileoToast {
 		root.append(canvas, header, content);
 
 		this.root = root;
+		this.canvas = canvas;
+		this.pill = pill;
+		this.body = body;
 		this.header = header;
 		this.stack = stack;
 		this.content = content;
@@ -245,14 +340,14 @@ class SileoToast {
 		root.setAttribute("data-state", state);
 		root.setAttribute("data-has-desc", String(hasDesc));
 		root.setAttribute("aria-label", title);
-		root.style.setProperty("--sileo-roundness", `${roundness}px`);
+		this._own("--sileo-roundness", `${roundness}px`);
 		this.goo.blur.setAttribute("stdDeviation", String(roundness * BLUR_RATIO));
-		root.style.setProperty("--sileo-goo", `url(#${this.goo.id})`);
+		this._own("--sileo-goo", `url(#${this.goo.id})`);
 		this.setFill(item.fill);
-		if (item.className) root.className = item.className;
 
 		this._header(state, title, item);
 		this._content(item, state);
+		this.applyStyles(item.styles, item.className);
 
 		if (this.isLoading) this.close();
 		this._measure();
@@ -280,15 +375,15 @@ class SileoToast {
 			"data-layer": "current",
 		});
 		const badge = el("div", { "data-sileo-badge": "", "data-state": state });
-		if (item.styles?.badge) badge.className = item.styles.badge;
 		if (item.icon != null) fill(badge, item.icon);
 		else badge.insertAdjacentHTML("afterbegin", STATE_ICON[state] || STATE_ICON.success);
 
 		const label = el("span", { "data-sileo-title": "", "data-state": state });
-		if (item.styles?.title) label.className = item.styles.title;
 		label.textContent = title;
 
 		inner.append(badge, label);
+		this.badge = badge;
+		this.label = label;
 		this.stack.appendChild(inner);
 
 		if (this.inner) this.ro.unobserve(this.inner);
@@ -299,7 +394,7 @@ class SileoToast {
 
 	_content(item, state) {
 		fill(this.desc, item.description);
-		if (item.styles?.description) this.desc.className = item.styles.description;
+		this.btn = null;
 
 		if (item.button) {
 			// <a> y no <button>: el toast ya es un <button>
@@ -309,7 +404,6 @@ class SileoToast {
 				"data-sileo-button": "",
 				"data-state": state,
 			});
-			if (item.styles?.button) btn.className = item.styles.button;
 			btn.textContent = item.button.title;
 			btn.addEventListener("click", (e) => {
 				e.preventDefault();
@@ -317,7 +411,44 @@ class SileoToast {
 				item.button.onClick?.();
 			});
 			this.desc.appendChild(btn);
+			this.btn = btn;
 		}
+	}
+
+	/**
+	 * Estilos de usuario sobre cada parte. Se puede llamar en caliente (cambiar
+	 * `options.styles` con el toast ya montado) porque styleNode retira lo
+	 * anterior antes de poner lo nuevo.
+	 */
+	applyStyles(styles, className) {
+		const s = styles || {};
+		this.ownProps ||= {};
+		if (this.item) this.item.styles = styles;
+		styleNode(this.root, s.toast ?? className);
+		styleNode(this.canvas, s.canvas);
+		styleNode(this.pill, s.pill);
+		styleNode(this.body, s.body);
+		styleNode(this.header, s.header);
+		styleNode(this.badge, s.badge);
+		styleNode(this.label, s.title);
+		styleNode(this.content, s.content);
+		styleNode(this.desc, s.description);
+		styleNode(this.btn, s.button);
+
+		// Si el usuario deja de escribir una variable que tambien maneja Sileo,
+		// styleNode la retira: aqui se repone la nuestra.
+		for (const prop in this.ownProps) {
+			if (!this.root.style.getPropertyValue(prop)) {
+				this.root.style.setProperty(prop, this.ownProps[prop]);
+			}
+		}
+	}
+
+	/** Variable inline que gestiona Sileo (y que el usuario puede pisar). */
+	_own(prop, value) {
+		this.ownProps ||= {};
+		this.ownProps[prop] = value;
+		this.root.style.setProperty(prop, value);
 	}
 
 	/**
@@ -369,7 +500,7 @@ class SileoToast {
 	setFill(fill) {
 		if (!fill || fill === this.fill) return;
 		this.fill = fill;
-		this.root.style.setProperty("--sileo-fill", fill);
+		this._own("--sileo-fill", fill);
 	}
 
 	/* ---------------------------------- Slot ---------------------------------- */
@@ -529,20 +660,30 @@ const resolveAutopilot = (opts, duration) => {
 	};
 };
 
-const mergeOptions = (options) => ({
-	...store.options,
-	...options,
-	styles: { ...store.options?.styles, ...options.styles },
-});
+/**
+ * Defaults globales + opciones de la llamada. Los `styles` NO se mezclan aqui:
+ * el item se queda solo con los suyos y la mezcla con los globales se hace en
+ * cada render, para que cambiar `options.styles` en caliente alcance tambien a
+ * los toasts que ya estan en pantalla.
+ */
+const mergeOptions = (options) => {
+	const merged = { ...store.options, ...options };
+	if (options.styles) merged.styles = options.styles;
+	else delete merged.styles;
+	return merged;
+};
 
-const buildItem = (merged, id, fallbackPosition) => {
+const buildItem = (merged, id, prev) => {
 	const duration = merged.duration ?? DEFAULT_TOAST_DURATION;
 	return {
 		...merged,
 		...resolveAutopilot(merged, duration),
 		id,
 		instanceId: generateId(),
-		position: merged.position ?? fallbackPosition ?? store.position,
+		position: merged.position ?? prev?.position ?? store.position,
+		// Si el toast no pidio posicion, sigue a la del toaster y se mueve con
+		// ella cuando cambia en caliente.
+		positionExplicit: merged.position != null || Boolean(prev?.positionExplicit),
 	};
 };
 
@@ -550,7 +691,7 @@ const createToast = (options) => {
 	const merged = mergeOptions(options);
 	const id = merged.id ?? "sileo-default";
 	const prev = store.toasts.filter((t) => !t.exiting).find((t) => t.id === id);
-	const item = buildItem(merged, id, prev?.position);
+	const item = buildItem(merged, id, prev);
 
 	if (prev) {
 		store.update((p) => p.map((t) => (t.id === id ? item : t)));
@@ -563,7 +704,7 @@ const createToast = (options) => {
 const updateToast = (id, options) => {
 	const existing = store.toasts.find((t) => t.id === id);
 	if (!existing) return;
-	const item = buildItem(mergeOptions(options), id, existing.position);
+	const item = buildItem(mergeOptions(options), id, existing);
 	store.update((prev) => prev.map((t) => (t.id === id ? item : t)));
 };
 
@@ -612,6 +753,13 @@ export const sileo = {
 		return p;
 	},
 
+	/* --- configuracion en caliente, sirva el framework que sirva --- */
+	configure: (opts) => configure(opts),
+	setTheme: (theme) => configure({ theme }),
+	setPosition: (position) => configure({ position }),
+	setStyles: (styles) => configure({ styles }),
+	getConfig: () => getConfig(),
+
 	update: updateToast,
 	dismiss: dismissToast,
 	clear: (position) =>
@@ -633,6 +781,13 @@ class Toaster {
 
 		store.position = this.position;
 		store.options = opts.options;
+		// `styles` tambien se acepta suelto: createToaster({ styles: {...} })
+		if (opts.styles) {
+			store.options = {
+				...store.options,
+				styles: mergeStyles(store.options?.styles, opts.styles),
+			};
+		}
 
 		this.visibleToasts = opts.visibleToasts;
 
@@ -642,15 +797,33 @@ class Toaster {
 		// position -> estado del stack de tabs
 		this.stacks = new Map(); // { el, hot, focusedId, order, metrics, laying }
 
-		if (this.theme === "system" || this.theme == null) {
-			this.mq = window.matchMedia("(prefers-color-scheme: dark)");
-			this.onMq = () => this._render(store.toasts);
-			this.mq.addEventListener("change", this.onMq);
-		}
+		this._watchTheme();
 
 		this.listener = (list) => this._render(list);
 		store.listeners.add(this.listener);
 		this._render(store.toasts);
+	}
+
+	/**
+	 * "system" (o sin tema) sigue al SO. Se resuscribe cada vez que cambia el
+	 * tema, para que pasar a "system" en caliente vuelva a escuchar.
+	 */
+	_watchTheme() {
+		const wants = this.theme === "system" || this.theme == null;
+		if (wants === Boolean(this.mq)) return;
+		if (wants) {
+			this.mq = window.matchMedia("(prefers-color-scheme: dark)");
+			this.onMq = () => this._render(store.toasts);
+			this.mq.addEventListener("change", this.onMq);
+		} else {
+			this.mq.removeEventListener("change", this.onMq);
+			this.mq = null;
+		}
+	}
+
+	/** Los `styles` globales del toaster (los del toast se mezclan encima). */
+	get styles() {
+		return store.options?.styles;
 	}
 
 	get resolvedTheme() {
@@ -677,6 +850,7 @@ class Toaster {
 			// toast: no se anuncia ni se puede enfocar.
 			const chip = el("div", { "data-sileo-count": "", "aria-hidden": "true" });
 			vp.appendChild(chip);
+			vp._sileoChip = chip;
 
 			this.stacks.set(pos, {
 				el: vp,
@@ -702,6 +876,11 @@ class Toaster {
 
 	_applyOffset(vp, pos) {
 		const offset = this.offset;
+		// Se limpia siempre: el offset puede cambiar en caliente y lo anterior
+		// no debe quedarse pegado.
+		for (const side of ["top", "right", "bottom", "left"]) {
+			vp.style.removeProperty(side);
+		}
 		if (offset == null) return;
 		const o =
 			typeof offset === "object"
@@ -725,10 +904,18 @@ class Toaster {
 			const resolved = {
 				...item,
 				position: pos,
+				styles: mergeStyles(this.styles, item.styles),
 				fill: item.fill ?? (this.theme ? THEME_FILLS[this.resolvedTheme] : undefined),
 			};
 
 			let toast = this.toasts.get(item.id);
+			// La posicion cambio (del toast o del toaster): se rehace en el
+			// viewport nuevo, que es quien manda la geometria y la direccion.
+			if (toast && toast.pos !== pos) {
+				toast.destroy();
+				this.toasts.delete(item.id);
+				toast = undefined;
+			}
 			if (!toast) {
 				toast = new SileoToast(resolved, this);
 				this.toasts.set(item.id, toast);
@@ -736,8 +923,9 @@ class Toaster {
 			} else if (toast.instanceId !== item.instanceId) {
 				toast.update(resolved);
 			} else {
-				// el tema puede haber cambiado sin que el toast se rehaga
+				// el tema o los estilos pueden cambiar sin que el toast se rehaga
 				toast.setFill(resolved.fill);
+				toast.applyStyles(resolved.styles, resolved.className);
 			}
 			toast.instanceId = item.instanceId;
 
@@ -754,9 +942,14 @@ class Toaster {
 
 		// El tema puede cambiar sin que se cree ningun viewport: _viewport() solo
 		// corre al insertar un toast, asi que aqui se refresca en los que ya hay.
-		for (const vp of this.viewports.values()) {
+		const styles = this.styles;
+		for (const [pos, vp] of this.viewports) {
 			if (this.theme) vp.setAttribute("data-theme", this.resolvedTheme);
 			else vp.removeAttribute("data-theme");
+			styleNode(vp, styles?.viewport);
+			styleNode(vp._sileoChip, styles?.count);
+			// despues de styleNode: el offset manda sobre el estilo de usuario
+			this._applyOffset(vp, pos);
 		}
 
 		this._order(list);
@@ -1005,17 +1198,100 @@ class Toaster {
 
 	/* --------------------------------- Config --------------------------------- */
 
+	/**
+	 * Reconfigura el toaster en caliente: posicion, tema, offset, estilos...
+	 * Todo lo que ya esta en pantalla se reajusta (los toasts que no pidieron
+	 * posicion propia se mudan al viewport nuevo).
+	 *
+	 *   toaster.set({ theme: "dark" });
+	 *   toaster.set({ position: "bottom-center" });
+	 *   toaster.set({ styles: { toast: "top-90" } });   // mezcla
+	 *   toaster.set({ options: null });                 // reset de los defaults
+	 *
+	 * Por defecto `options` y `styles` se mezclan con lo que ya hubiera. Pasa
+	 * `replace: true` para que sustituyan (lo que usan los adaptadores
+	 * reactivos, que ya mandan el estado completo).
+	 */
 	set(opts = {}) {
+		const prevPosition = this.position;
+		const replace = opts.replace === true;
+
 		if (opts.position) {
 			this.position = opts.position;
 			store.position = opts.position;
 		}
-		if ("options" in opts) store.options = opts.options;
-		if ("theme" in opts) this.theme = opts.theme;
+		if ("options" in opts) {
+			store.options =
+				opts.options == null
+					? undefined
+					: replace
+						? { ...opts.options }
+						: {
+								...store.options,
+								...opts.options,
+								styles: mergeStyles(store.options?.styles, opts.options.styles),
+							};
+		}
+		// Atajo: set({ styles }) toca solo los estilos, sin pisar el resto de
+		// defaults. `null` los borra.
+		if ("styles" in opts) {
+			store.options = {
+				...store.options,
+				styles:
+					opts.styles == null
+						? undefined
+						: replace
+							? { ...opts.styles }
+							: mergeStyles(store.options?.styles, opts.styles),
+			};
+		}
+		if ("theme" in opts) {
+			this.theme = opts.theme;
+			this._watchTheme();
+		}
 		if ("offset" in opts) this.offset = opts.offset;
 		if ("visibleToasts" in opts) this.visibleToasts = opts.visibleToasts;
 		for (const st of this.stacks.values()) st.metrics = null;
-		this._render(store.toasts);
+
+		if (this.position !== prevPosition) {
+			// Los toasts vivos que seguian a la posicion del toaster se mudan.
+			store.update((prev) =>
+				prev.map((t) =>
+					t.positionExplicit || t.position !== prevPosition
+						? t
+						: { ...t, position: this.position },
+				),
+			);
+			this._cleanupViewports();
+		} else {
+			this._render(store.toasts);
+		}
+	}
+
+	/** Quita los viewports que se quedaron sin toasts (p.ej. tras mover todo). */
+	_cleanupViewports() {
+		const used = new Set();
+		for (const toast of this.toasts.values()) used.add(toast.pos);
+		for (const [pos, vp] of this.viewports) {
+			if (used.has(pos) || pos === this.position) continue;
+			clearTimeout(this.stacks.get(pos)?.leaveTimer);
+			vp.remove();
+			this.viewports.delete(pos);
+			this.stacks.delete(pos);
+		}
+	}
+
+	/** Config actual (util para pintar controles de tema/posicion). */
+	get config() {
+		return {
+			position: this.position,
+			theme: this.theme,
+			resolvedTheme: this.resolvedTheme,
+			offset: this.offset,
+			visibleToasts: this.visibleToasts,
+			options: store.options,
+			styles: store.options?.styles,
+		};
 	}
 
 	destroy() {
@@ -1041,6 +1317,26 @@ export function createToaster(opts = {}) {
 	return defaultToaster;
 }
 
+/**
+ * Reconfigura el toaster en caliente desde cualquier sitio (sin framework):
+ *
+ *   configure({ theme: "dark" });
+ *   configure({ position: "bottom-center" });
+ *   configure({ styles: { toast: "top-90", badge: "ring-2" } });
+ *
+ * Si aun no hay toaster, lo monta.
+ */
+export function configure(opts = {}) {
+	const toaster = ensureToaster();
+	toaster?.set(opts);
+	return toaster;
+}
+
+/** La config actual del toaster (o null si no hay). */
+export function getConfig() {
+	return defaultToaster ? defaultToaster.config : null;
+}
+
 /** El toaster montado, o null. Sirve para saber si ya lo creo alguien mas. */
 export function getToaster() {
 	return defaultToaster;
@@ -1054,5 +1350,5 @@ function ensureToaster() {
 	return defaultToaster;
 }
 
-export { Toaster, dismissToast };
+export { Toaster, dismissToast, styleNode };
 export default sileo;
