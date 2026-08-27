@@ -468,13 +468,17 @@ export class AppComponent implements OnInit, OnDestroy {
 					</table>
 
 					<div class="nota">
-						El <code>id</code> por defecto es <code>"sileo-default"</code>: llamadas
-						repetidas <strong>reemplazan</strong> el mismo toast en vez de apilarse.
-						Pasa un <code>id</code> propio a cada uno para que convivan.
+						<strong>Cada llamada es una notificación.</strong> Sin <code>id</code> se
+						le asigna uno único, así que dos llamadas seguidas se ven las dos y
+						conviven en la fila. Pasa un <code>id</code> propio cuando quieras que
+						la siguiente llamada <strong>reemplace</strong> a esa misma notificación
+						—es como se sigue una tarea (progreso, reintentos,
+						<code>sileo.promise()</code>, <code>sileo.update()</code>).
 					</div>
 					<div class="probar">
-						<button type="button" data-run="mismo-id">Sin id (se reemplaza)</button>
-						<button type="button" data-run="ids">Con id propio (se apilan)</button>
+						<button type="button" data-run="sin-id">Sin id (se ven todas)</button>
+						<button type="button" data-run="mismo-id">Con id propio (se reemplaza)</button>
+						<button type="button" data-run="ids">Tres a la vez</button>
 					</div>
 
 					<h3><code>sileo.promise()</code></h3>
@@ -508,7 +512,7 @@ export class AppComponent implements OnInit, OnDestroy {
 					<table>
 						<thead><tr><th>Opción</th><th>Tipo</th><th>Por defecto</th><th>Descripción</th></tr></thead>
 						<tbody>
-							<tr><td><code>id</code></td><td><code>string</code></td><td><code>"sileo-default"</code></td><td>Identidad. Mismo id = mismo toast</td></tr>
+							<tr><td><code>id</code></td><td><code>string</code></td><td>uno único por llamada</td><td>Identidad. Mismo id = mismo toast (lo reemplaza)</td></tr>
 							<tr><td><code>title</code></td><td><code>string</code></td><td>el estado</td><td>Texto de la cápsula</td></tr>
 							<tr><td><code>description</code></td><td><code>string | Node | {html}</code></td><td>—</td><td>El mensaje del panel. Sin él, el toast no se despliega</td></tr>
 							<tr><td><code>type</code> / <code>state</code></td><td><code>success | loading | error | warning | info | action</code></td><td><code>"success"</code></td><td>Color e icono</td></tr>
@@ -637,8 +641,10 @@ toaster.destroy();                            // desmontar y limpiar</code></pre
 						auto-cierra: está esperando a que lo actualices.
 					</p>
 					<div class="nota">
-						<strong>Repetir la misma notificación siempre se ve.</strong> Vuelve al
-						frente de la fila —aunque estuviera enterrada bajo el corte del stack o
+						<strong>Ninguna llamada se pierde.</strong> Sin <code>id</code>, cada una
+						es su propia notificación y conviven en la fila. Con el mismo
+						<code>id</code> la nueva reemplaza a la anterior, pero se ve igual:
+						vuelve al frente de la fila —aunque estuviera enterrada bajo el corte del stack o
 						en plena salida—, la cabecera repite su entrada aunque el texto sea
 						idéntico, y su tiempo arranca de cero.
 					</div>

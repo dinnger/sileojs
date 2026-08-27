@@ -197,8 +197,10 @@ tabs.
 | `sileo.setTheme / setPosition / setStyles(v)` | `configure` shorthands |
 | `sileo.getConfig()` | The current config (or `null` with no toaster) |
 
-They return the toast's `id` (`"sileo-default"` by default, so repeated calls
-**replace** the same toast; pass your own `id` to stack them).
+They return the toast's `id`. **Every call is a notification**: with no `id` one
+is generated for it, so two calls in a row both show. Pass your own `id` when
+you want the next call to **replace** that same notification (that is how you
+follow a task: `sileo.promise()`, `sileo.update()`).
 
 ### Toast options
 
@@ -215,7 +217,7 @@ They return the toast's `id` (`"sileo-default"` by default, so repeated calls
 | `roundness` | `number` (scales the gooey blur) | `16` |
 | `autopilot` | `false \| { expand, collapse }` (ms) | opens at 150ms, closes at 4000ms |
 | `button` | `{ title, onClick }` | — |
-| `id` | `string` | `"sileo-default"` |
+| `id` | `string` | a unique one per call |
 
 ### Toaster options
 
@@ -289,10 +291,11 @@ pointer the browser fires no `pointerenter`, so Sileo checks where the pointer
 is on mount and on every relayout. The panel stays open and the auto-dismiss
 paused until the cursor **leaves**, and only then does the clock start again.
 
-Calling the same notification twice never gets swallowed: the toast comes back
-to the front of the row (even if it was buried under the stack cut, or halfway
-out), the header replays its entrance even when the text is identical, and the
-timer starts from zero.
+No call ever gets swallowed. With no `id`, each one is its own notification and
+they coexist in the row. With the same `id`, the new one replaces the previous
+but still shows: it comes back to the front of the row (even if it was buried
+under the stack cut, or halfway out), the header replays its entrance even when
+the text is identical, and the timer starts from zero.
 
 ## The overlapping tab row
 

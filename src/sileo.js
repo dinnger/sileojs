@@ -759,15 +759,16 @@ const buildItem = (merged, id, prev) => {
 };
 
 /*
- * Cada llamada tiene que verse. Con el mismo id se reemplaza el toast (eso no
- * cambia), pero el item se lleva al final de la lista, que es el frente de la
- * fila: si estaba enterrado bajo el corte del stack, o saliendo, vuelve a
- * asomar. Y aunque el texto sea identico, la cabecera repite su entrada para
- * que se vea que ha vuelto a pasar algo.
+ * Cada llamada tiene que verse. Sin `id`, cada una es una notificacion distinta
+ * y todas conviven en la fila. Con `id` propio se reemplaza la que lo lleve
+ * (que es como se sigue una tarea: promise, update...), pero el item se lleva
+ * al final de la lista, que es el frente de la fila: si estaba enterrado bajo
+ * el corte del stack, o saliendo, vuelve a asomar. Y aunque el texto sea
+ * identico, la cabecera repite su entrada para que se vea que ha pasado algo.
  */
 const createToast = (options) => {
 	const merged = mergeOptions(options);
-	const id = merged.id ?? "sileo-default";
+	const id = merged.id ?? `sileo-${generateId()}`;
 	const prev = store.toasts.filter((t) => !t.exiting).find((t) => t.id === id);
 	const item = buildItem(merged, id, prev);
 

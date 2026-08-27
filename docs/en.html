@@ -461,13 +461,17 @@ export class AppComponent implements OnInit, OnDestroy {
 					</table>
 
 					<div class="nota">
-						The default <code>id</code> is <code>"sileo-default"</code>: repeated
-						calls <strong>replace</strong> the same toast instead of stacking. Pass
-						your own <code>id</code> to each one so they coexist.
+						<strong>Every call is a notification.</strong> With no <code>id</code>
+						one is generated for it, so two calls in a row both show and coexist in
+						the row. Pass your own <code>id</code> when you want the next call to
+						<strong>replace</strong> that same notification — that is how you follow
+						a task (progress, retries, <code>sileo.promise()</code>,
+						<code>sileo.update()</code>).
 					</div>
 					<div class="probar">
-						<button type="button" data-run="mismo-id">No id (replaced)</button>
-						<button type="button" data-run="ids">Own id (stacked)</button>
+						<button type="button" data-run="sin-id">No id (all of them show)</button>
+						<button type="button" data-run="mismo-id">Own id (replaced)</button>
+						<button type="button" data-run="ids">Three at once</button>
 					</div>
 
 					<h3><code>sileo.promise()</code></h3>
@@ -501,7 +505,7 @@ export class AppComponent implements OnInit, OnDestroy {
 					<table>
 						<thead><tr><th>Option</th><th>Type</th><th>Default</th><th>Description</th></tr></thead>
 						<tbody>
-							<tr><td><code>id</code></td><td><code>string</code></td><td><code>"sileo-default"</code></td><td>Identity. Same id = same toast</td></tr>
+							<tr><td><code>id</code></td><td><code>string</code></td><td>a unique one per call</td><td>Identity. Same id = same toast (replaces it)</td></tr>
 							<tr><td><code>title</code></td><td><code>string</code></td><td>the state</td><td>Text on the capsule</td></tr>
 							<tr><td><code>description</code></td><td><code>string | Node | {html}</code></td><td>—</td><td>The panel's message. Without it the toast never unfolds</td></tr>
 							<tr><td><code>type</code> / <code>state</code></td><td><code>success | loading | error | warning | info | action</code></td><td><code>"success"</code></td><td>Colour and icon</td></tr>
@@ -628,8 +632,10 @@ toaster.destroy();                            // unmount and clean up</code></pr
 						auto-closes: it is waiting for you to update it.
 					</p>
 					<div class="nota">
-						<strong>Firing the same notification again always shows.</strong> It
-						comes back to the front of the row — even if it was buried under the
+						<strong>No call ever gets swallowed.</strong> With no <code>id</code>,
+						each one is its own notification and they coexist in the row. With the
+						same <code>id</code> the new one replaces the previous, but still shows:
+						it comes back to the front of the row — even if it was buried under the
 						stack cut, or halfway out — the header replays its entrance even with
 						identical text, and its timer starts from zero.
 					</div>

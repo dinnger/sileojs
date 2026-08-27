@@ -469,6 +469,34 @@ ok("repetir en plena salida: la salida vieja no se la lleva", !!t.toasts.get("re
 sileo.clear();
 await sleep(900);
 
+
+// ------------------------------------------- sin id, cada llamada es una toast
+sileo.clear();
+await sleep(900);
+sileo.success({ title: "Sesion iniciada", description: "Bienvenido." });
+sileo.info({ title: "Test", description: "Esta es una prueba 123." });
+await sleep(400);
+const titulos = () =>
+  [...st().el.querySelectorAll("[data-sileo-title]")].map((n) => n.textContent);
+ok("sin id: se ven las dos", st().order.length === 2, JSON.stringify(titulos()));
+ok("sin id: cada una con su id", new Set(st().order).size === 2, JSON.stringify(st().order));
+ok("sin id: la ultima queda al frente",
+   node(st().order[0]).querySelector("[data-sileo-title]").textContent === "Test",
+   JSON.stringify(titulos()));
+
+// y con id propio sigue reemplazando
+sileo.clear();
+await sleep(900);
+sileo.success({ id: "fijo2", title: "Uno", description: "Primera." });
+sileo.success({ id: "fijo2", title: "Dos", description: "Segunda." });
+await sleep(400);
+ok("con id propio: sigue siendo un solo toast", st().order.length === 1, JSON.stringify(st().order));
+ok("con id propio: se queda el ultimo",
+   node("fijo2").querySelector("[data-sileo-title]").textContent === "Dos",
+   node("fijo2").querySelector("[data-sileo-title]").textContent);
+sileo.clear();
+await sleep(900);
+
 document.getElementById("log").textContent =
   log.join("\n") + `\n\n${fails === 0 ? "TODO OK" : fails + " FALLOS"}`;
 </script></body></html>

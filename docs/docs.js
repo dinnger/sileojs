@@ -18,7 +18,7 @@ const T = {
 		guardado: "Guardado",
 		sincronizado: "Tus cambios se sincronizaron.",
 		sincronizadoLargo: "Tus cambios se sincronizaron con el servidor.",
-		sinId: "Sin id",
+		sinId: "Con id propio",
 		reemplaza: "Reemplaza al anterior",
 		gracias: "Gracias",
 		iconoPropio: "Icono propio pasado como { html }.",
@@ -48,7 +48,7 @@ const T = {
 		guardado: "Saved",
 		sincronizado: "Your changes were synced.",
 		sincronizadoLargo: "Your changes were synced with the server.",
-		sinId: "No id",
+		sinId: "With its own id",
 		reemplaza: "Replaces the previous one",
 		gracias: "Thanks",
 		iconoPropio: "Custom icon passed as { html }.",
@@ -104,8 +104,14 @@ const ejemplos = {
 		sileo.success({ id: "quick", title: T.guardado, description: T.sincronizadoLargo }),
 	"mismo-id": () =>
 		sileo.info({
+			id: "mismo",
 			title: T.sinId,
 			description: `${T.reemplaza} · ${new Date().toLocaleTimeString()}`,
+		}),
+	"sin-id": () =>
+		sileo.success({
+			title: T.guardado,
+			description: `${T.sincronizado} · ${new Date().toLocaleTimeString()}`,
 		}),
 	ids: () => apilar(3),
 	stack: () => apilar(3),

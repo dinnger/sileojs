@@ -195,8 +195,10 @@ pestañas.
 | `sileo.setTheme / setPosition / setStyles(v)` | Atajos de `configure` |
 | `sileo.getConfig()` | La config actual (o `null` si no hay toaster) |
 
-Devuelven el `id` del toast (por defecto `"sileo-default"`, así que llamadas
-repetidas **reemplazan** el mismo toast; pasa un `id` propio para apilar).
+Devuelven el `id` del toast. **Cada llamada es una notificación**: sin `id` se
+le asigna uno único, así que dos llamadas seguidas se ven las dos. Pasa un `id`
+propio cuando quieras que la siguiente llamada **reemplace** a esa misma
+notificación (es como se sigue una tarea: `sileo.promise()`, `sileo.update()`).
 
 ### Opciones del toast
 
@@ -213,7 +215,7 @@ repetidas **reemplazan** el mismo toast; pasa un `id` propio para apilar).
 | `roundness` | `number` (escala el blur del gooey) | `16` |
 | `autopilot` | `false \| { expand, collapse }` (ms) | expande a 150ms, colapsa a 4000ms |
 | `button` | `{ title, onClick }` | — |
-| `id` | `string` | `"sileo-default"` |
+| `id` | `string` | uno único por llamada |
 
 ### Opciones del toaster
 
@@ -288,10 +290,11 @@ navegador no dispara `pointerenter`, así que Sileo comprueba dónde está el
 puntero al montar y al recolocar el stack. El panel se queda abierto y el
 auto-cierre en pausa hasta que el cursor **sale**, y ahí vuelve a contar.
 
-Llamar dos veces a la misma notificación no se pierde nunca: el toast vuelve al
-frente de la fila (aunque estuviera enterrado bajo el corte del stack o en plena
-salida), la cabecera repite su entrada aunque el texto sea idéntico y el tiempo
-arranca de cero.
+Ninguna llamada se pierde. Sin `id`, cada una es su propia notificación y
+conviven en la fila. Con el mismo `id`, la nueva reemplaza a la anterior pero se
+ve igual: vuelve al frente de la fila (aunque estuviera enterrada bajo el corte
+del stack o en plena salida), la cabecera repite su entrada aunque el texto sea
+idéntico y el tiempo arranca de cero.
 
 ## Fila de tabs solapadas
 
