@@ -3,15 +3,43 @@
 	<head>
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>Sileo · Documentación</title>
+		<title>Sileo (sileojs) · Notificaciones toast para JavaScript y Vue 3 — Documentación</title>
+		<meta name="description" content="Documentación de sileojs: notificaciones toast con morphing gooey y spring physics. Core vanilla JS sin dependencias para cualquier framework, adaptador Vue 3 y toda la animación en CSS." />
+		<link rel="canonical" href="https://dinnger.github.io/sileojs/docs/" />
+		<meta property="og:type" content="website" />
+		<meta property="og:site_name" content="Sileo" />
+		<meta property="og:title" content="Sileo (sileojs) · Notificaciones toast para JavaScript y Vue 3 — Documentación" />
+		<meta property="og:description" content="Documentación de sileojs: notificaciones toast con morphing gooey y spring physics. Core vanilla JS sin dependencias para cualquier framework, adaptador Vue 3 y toda la animación en CSS." />
+		<meta property="og:url" content="https://dinnger.github.io/sileojs/docs/" />
+		<meta property="og:locale" content="es_ES" />
+		<meta property="og:locale:alternate" content="en_US" />
+		<meta name="twitter:card" content="summary" />
+		<script type="application/ld+json">
+			{
+				"@context": "https://schema.org",
+				"@type": "SoftwareSourceCode",
+				"name": "Sileo (sileojs)",
+				"description": "Documentación de sileojs: notificaciones toast con morphing gooey y spring physics. Core vanilla JS sin dependencias para cualquier framework, adaptador Vue 3 y toda la animación en CSS.",
+				"url": "https://dinnger.github.io/sileojs/docs/",
+				"codeRepository": "https://github.com/dinnger/sileojs",
+				"programmingLanguage": ["JavaScript", "CSS"],
+				"runtimePlatform": "Web browser",
+				"license": "https://opensource.org/licenses/MIT",
+				"inLanguage": "es",
+				"author": { "@type": "Person", "name": "Walter Omar", "url": "https://github.com/dinnger" }
+			}
+		</script>
 		<link rel="stylesheet" href="../src/sileo.css" />
 		<link rel="stylesheet" href="./docs.css" />
-		<link rel="alternate" hreflang="en" href="./en.html" />
-		<link rel="alternate" hreflang="es" href="./index.html" />
+		<link rel="alternate" hreflang="en" href="https://dinnger.github.io/sileojs/docs/en.html" />
+		<link rel="alternate" hreflang="es" href="https://dinnger.github.io/sileojs/docs/" />
+		<link rel="alternate" hreflang="x-default" href="https://dinnger.github.io/sileojs/docs/en.html" />
 		<script>
 			/* Idioma: manda lo que hayas elegido; si no, el del navegador. Va aquí,
 			   antes de pintar, para no enseñar la página equivocada un instante. */
 			try {
+				/* Los buscadores ven cada idioma tal cual, sin redirigir. */
+				if (/bot|crawl|spider|slurp|lighthouse/i.test(navigator.userAgent)) throw 0;
 				const elegido = localStorage.getItem("sileo-docs-lang");
 				const nav = (navigator.language || "es").slice(0, 2).toLowerCase();
 				if ((elegido || (nav === "es" ? "es" : "en")) !== "es") {
@@ -26,7 +54,7 @@
 
 		<div class="layout">
 			<aside class="lateral">
-				<p class="marca">Sileo <span>v0.1.0</span></p>
+				<p class="marca">Sileo <span>v0.1.10</span></p>
 				<p class="sub">Toast con morphing gooey y spring physics.</p>
 
 				<p class="idioma">
